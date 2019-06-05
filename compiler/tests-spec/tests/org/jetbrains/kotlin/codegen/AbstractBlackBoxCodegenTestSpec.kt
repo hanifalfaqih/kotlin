@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
- * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
+ * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.codegen
@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.spec.utils.GeneralConfiguration.TESTDATA_PATH
 import org.jetbrains.kotlin.spec.validators.BlackBoxTestTypeValidator
 import org.jetbrains.kotlin.spec.validators.SpecTestValidationException
 import org.junit.Assert
-import java.io.File
+import java.io.*
 
 abstract class AbstractBlackBoxCodegenTestSpec : AbstractBlackBoxCodegenTest() {
     companion object {
@@ -43,7 +43,7 @@ abstract class AbstractBlackBoxCodegenTestSpec : AbstractBlackBoxCodegenTest() {
         }
     }
 
-    override fun doMultiFileTest(wholeFile: File, files: MutableList<TestFile>) {
+    override fun doMultiFileTest(wholeFile: File, files: MutableList<TestFile>, javaFilesDir: File?) {
         val (specTest, testLinkedType) = CommonParser.parseSpecTest(
             wholeFile.canonicalPath,
             mapOf("main.kt" to FileUtil.loadFile(wholeFile, true))
@@ -61,12 +61,12 @@ abstract class AbstractBlackBoxCodegenTestSpec : AbstractBlackBoxCodegenTest() {
 
         includeHelpers(wholeFile, files, specTest)
 
+        val runTest = { super.doMultiFileTest(wholeFile, files, javaFilesDir, specTest.unexpectedBehavior) }
+
         if (specTest.exception == null) {
-            super.doMultiFileTest(wholeFile, files)
+            runTest()
         } else {
-            TestExceptionsComparator(wholeFile).run(specTest.exception) {
-                super.doMultiFileTest(wholeFile, files)
-            }
+            TestExceptionsComparator(wholeFile).run(specTest.exception, runTest)
         }
     }
 }
