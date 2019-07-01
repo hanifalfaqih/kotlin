@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.idea.core.script.dependencies
 
 import com.intellij.openapi.project.Project
-import org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationUpdater
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.KtFileScriptSource
@@ -17,7 +16,7 @@ class SyncScriptDependenciesLoader(project: Project) : ScriptDependenciesLoader(
         file: KtFile,
         scriptDefinition: ScriptDefinition
     ): Boolean {
-        return !ScriptsCompilationConfigurationUpdater.getInstance(project).isAsyncDependencyResolver(scriptDefinition)
+        return !isAsyncDependencyResolver(scriptDefinition)
     }
 
     override fun loadDependencies(

@@ -15,12 +15,15 @@ import com.intellij.openapi.util.EmptyRunnable
 import org.jetbrains.kotlin.idea.core.script.*
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.scripting.definitions.KotlinScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
+import org.jetbrains.kotlin.scripting.resolve.LegacyResolverWrapper
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.scripting.resolve.ScriptReportSink
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.valueOrNull
+import kotlin.script.experimental.dependencies.AsyncDependenciesResolver
 
 // TODO: rename and provide alias for compatibility - this is not only about dependencies anymore
 abstract class ScriptDependenciesLoader(protected val project: Project) {
@@ -137,6 +140,11 @@ abstract class ScriptDependenciesLoader(protected val project: Project) {
 
         return true
     }
+
+    protected fun isAsyncDependencyResolver(scriptDef: ScriptDefinition): Boolean =
+        scriptDef.asLegacyOrNull<KotlinScriptDefinition>()?.dependencyResolver?.let {
+            it is AsyncDependenciesResolver || it is LegacyResolverWrapper
+        } ?: false
 
     companion object {
         private val LOG = Logger.getInstance("#org.jetbrains.kotlin.idea.script")

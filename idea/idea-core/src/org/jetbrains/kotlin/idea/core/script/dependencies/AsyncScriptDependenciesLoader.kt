@@ -11,7 +11,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Runnable
-import org.jetbrains.kotlin.idea.core.script.ScriptsCompilationConfigurationUpdater
 import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
@@ -33,7 +32,7 @@ class AsyncScriptDependenciesLoader internal constructor(project: Project) : Scr
         file: KtFile,
         scriptDefinition: ScriptDefinition
     ): Boolean {
-        return ScriptsCompilationConfigurationUpdater.getInstance(project).isAsyncDependencyResolver(scriptDefinition)
+        return isAsyncDependencyResolver(scriptDefinition)
     }
 
     override fun loadDependencies(
