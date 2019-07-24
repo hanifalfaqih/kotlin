@@ -331,7 +331,8 @@ protected constructor(
     ): PsiElement? {
         val psi = findModulePomFile(module) as? XmlFile ?: return null
         val pom = PomFile.forFileOrNull(psi) ?: return null
-        val element = pom.changeFeatureConfiguration(feature, state)
+        val kotlinVersion = pom.findPlugin(kotlinPluginId(null))?.version?.stringValue
+        val element = pom.changeFeatureConfiguration(feature, kotlinVersion, state)
         if (element == null) {
             Messages.showErrorDialog(
                 module.project,

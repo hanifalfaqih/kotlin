@@ -1,10 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+group = "testgroup"
+version = "1.0-SNAPSHOT"
 plugins {
     kotlin("jvm") version "1.2.60-dev-286"
 }
-group = "testgroup"
-version = "1.0-SNAPSHOT"
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 }

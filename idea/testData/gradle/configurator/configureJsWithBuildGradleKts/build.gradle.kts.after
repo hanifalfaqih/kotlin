@@ -1,11 +1,11 @@
-plugins {
-    id("kotlin2js") version "1.2.40"
-}
 group = "testgroup"
 version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+}
+plugins {
+    id("kotlin2js") version "1.2.40"
 }
 dependencies {
     implementation(kotlin("stdlib-js"))

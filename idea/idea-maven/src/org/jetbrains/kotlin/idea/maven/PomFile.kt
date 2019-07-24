@@ -694,6 +694,7 @@ fun PomFile.changeCoroutineConfiguration(value: String): PsiElement? {
 
 fun PomFile.changeFeatureConfiguration(
     feature: LanguageFeature,
+    kotlinVersion: String?,
     state: LanguageFeature.State
 ): PsiElement? {
     val kotlinPlugin = findPlugin(
@@ -711,7 +712,7 @@ fun PomFile.changeFeatureConfiguration(
         }
 
     argsSubTag.findSubTags("arg").filter { feature.name in it.value.text }.forEach { it.deleteCascade() }
-    val featureArgumentString = feature.buildArgumentString(state)
+    val featureArgumentString = feature.buildArgumentString(state, kotlinVersion)
     val childTag = argsSubTag.createChildTag("arg", featureArgumentString)
     return argsSubTag.add(childTag)
 }
