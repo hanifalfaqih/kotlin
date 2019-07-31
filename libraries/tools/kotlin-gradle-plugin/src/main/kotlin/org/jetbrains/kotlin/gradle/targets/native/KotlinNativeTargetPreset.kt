@@ -9,20 +9,19 @@ package org.jetbrains.kotlin.gradle.plugin.mpp
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.jetbrains.kotlin.compilerRunner.konanHome
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.plugin.KotlinNativeTargetConfigurator
-import org.jetbrains.kotlin.gradle.plugin.KotlinTargetPreset
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.KotlinTargetConfigurator
 import org.jetbrains.kotlin.gradle.plugin.PropertiesProvider
 import org.jetbrains.kotlin.gradle.utils.NativeCompilerDownloader
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
-class KotlinNativeTargetPreset(
+abstract class AbstractKotlinNativeTargetPreset<T : KotlinNativeTarget>(
     private val name: String,
     val project: Project,
     val konanTarget: KonanTarget,
-    private val kotlinPluginVersion: String
-) : KotlinTargetPreset<KotlinNativeTarget> {
+    protected val kotlinPluginVersion: String
+) : KotlinTargetPreset<T> {
 
     init {
         // This is required to obtain Kotlin/Native home in CLion plugin:
@@ -59,19 +58,23 @@ class KotlinNativeTargetPreset(
             ?.map { dir -> dependencies.create(files(dir)) } ?: emptyList()
     }
 
-    override fun createTarget(name: String): KotlinNativeTarget {
+    protected abstract fun createTargetConfigurator() : KotlinTargetConfigurator<T>
+
+    protected abstract fun instantiateTarget(name: String): T
+
+    override fun createTarget(name: String): T {
         setupNativeCompiler()
 
-        val result = KotlinNativeTarget(project, konanTarget).apply {
+        val result = instantiateTarget(name).apply {
             targetName = name
             disambiguationClassifier = name
-            preset = this@KotlinNativeTargetPreset
+            preset = this@AbstractKotlinNativeTargetPreset
 
             val compilationFactory = KotlinNativeCompilationFactory(project, this)
             compilations = project.container(compilationFactory.itemClass, compilationFactory)
         }
 
-        KotlinNativeTargetConfigurator(kotlinPluginVersion).configureTarget(result)
+        createTargetConfigurator().configureTarget(result)
 
         // Allow IDE to resolve the libraries provided by the compiler by adding them into dependencies.
         result.compilations.all { compilation ->
@@ -99,6 +102,24 @@ class KotlinNativeTargetPreset(
     companion object {
         private const val KOTLIN_NATIVE_HOME_PRIVATE_PROPERTY = "konanHome"
     }
+}
+
+open class KotlinNativeTargetPreset(name: String, project: Project, konanTarget: KonanTarget, kotlinPluginVersion: String) :
+    AbstractKotlinNativeTargetPreset<KotlinNativeTarget>(name, project, konanTarget, kotlinPluginVersion) {
+
+    override fun createTargetConfigurator(): KotlinTargetConfigurator<KotlinNativeTarget> =
+        KotlinNativeTargetConfigurator(kotlinPluginVersion)
+
+    override fun instantiateTarget(name: String): KotlinNativeTarget = KotlinNativeTarget(project, konanTarget)
+}
+
+open class KotlinNativeTargetWithTestsPreset(name: String, project: Project, konanTarget: KonanTarget, kotlinPluginVersion: String) :
+    AbstractKotlinNativeTargetPreset<KotlinNativeTargetWithTests>(name, project, konanTarget, kotlinPluginVersion) {
+
+    override fun createTargetConfigurator(): KotlinTargetConfigurator<KotlinNativeTargetWithTests> =
+        KotlinNativeTargetWithTestsConfigurator(kotlinPluginVersion)
+
+    override fun instantiateTarget(name: String): KotlinNativeTargetWithTests = KotlinNativeTargetWithTests(project, konanTarget)
 }
 
 internal val KonanTarget.isCurrentHost: Boolean

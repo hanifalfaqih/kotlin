@@ -9,9 +9,7 @@ import groovy.lang.Closure
 import org.gradle.api.InvalidUserCodeException
 import org.gradle.api.NamedDomainObjectCollection
 import org.gradle.util.ConfigureUtil
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
-import org.jetbrains.kotlin.gradle.plugin.KotlinTargetPreset
-import org.jetbrains.kotlin.gradle.plugin.KotlinTargetsContainerWithPresets
+import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 
@@ -52,6 +50,9 @@ open class KotlinMultiplatformExtension : KotlinProjectExtension(), KotlinTarget
         }
     }
 }
+
+val KotlinMultiplatformExtension.testableTargets: NamedDomainObjectCollection<KotlinTargetWithTests<out KotlinTargetTestRun>>
+    get() = targets.withType(KotlinTargetWithTests::class.java)
 
 internal fun KotlinTarget.isProducedFromPreset(kotlinTargetPreset: KotlinTargetPreset<*>): Boolean =
     preset == kotlinTargetPreset

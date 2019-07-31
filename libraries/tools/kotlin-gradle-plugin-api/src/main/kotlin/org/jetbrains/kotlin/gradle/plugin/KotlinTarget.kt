@@ -55,3 +55,7 @@ interface KotlinTarget : Named, HasAttributes {
 
     override fun getName(): String = targetName
 }
+
+interface KotlinTargetWithTests<T : KotlinTargetTestRun> : KotlinTarget {
+    val testRuns: NamedDomainObjectContainer<T>
+}
