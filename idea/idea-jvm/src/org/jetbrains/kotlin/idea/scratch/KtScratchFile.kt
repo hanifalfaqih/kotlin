@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.idea.scratch
 
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiComment
@@ -33,7 +34,11 @@ import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.AnalyzingUtils
 
-class KtScratchFile(project: Project, editor: TextEditor) : ScratchFile(project, editor) {
+class KtScratchFile(
+    project: Project,
+    editor: TextEditor,
+    previewEditor: Editor
+) : ScratchFile(project, editor, previewEditor) {
     override fun getExpressions(psiFile: PsiFile): List<ScratchExpression> {
         // todo multiple expressions at one line
         val doc = PsiDocumentManager.getInstance(psiFile.project).getLastCommittedDocument(psiFile) ?: return emptyList()

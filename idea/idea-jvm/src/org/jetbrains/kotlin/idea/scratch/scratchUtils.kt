@@ -32,6 +32,8 @@ val VirtualFile.isKotlinWorksheet: Boolean
 val VirtualFile.isKotlinScratch: Boolean
     get() = ScratchFileService.getInstance().getRootType(this) is ScratchRootType
 
+val VirtualFile.isKotlinScratch: Boolean get() = ScratchFileService.getInstance().getRootType(this) is ScratchRootType
+
 fun getEditorWithoutScratchPanel(fileManager: FileEditorManager, virtualFile: VirtualFile): TextEditor? {
     val editor = fileManager.getSelectedEditor(virtualFile) as? TextEditor
     if (editor?.scratchTopPanel != null) return null

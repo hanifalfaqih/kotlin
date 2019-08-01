@@ -26,6 +26,7 @@ import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
@@ -56,9 +57,14 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
     }
 
     companion object {
-        fun createPanel(project: Project, virtualFile: VirtualFile, editor: TextEditor) {
+        fun createPanel(
+            project: Project,
+            virtualFile: VirtualFile,
+            editor: TextEditor,
+            previewEditor: Editor
+        ) {
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
-            val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor) ?: return
+            val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor, previewEditor) ?: return
             val panel = ScratchTopPanel(scratchFile)
 
             val toolbarHandler = createUpdateToolbarHandler(panel)
