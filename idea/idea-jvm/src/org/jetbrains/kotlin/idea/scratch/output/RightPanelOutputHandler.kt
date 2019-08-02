@@ -5,9 +5,11 @@
 
 package org.jetbrains.kotlin.idea.scratch.output
 
+import com.intellij.diff.util.DiffUtil
 import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.executeCommand
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.util.Key
@@ -15,7 +17,7 @@ import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.psi.UserDataProperty
 import java.util.*
-import kotlin.math.min
+import kotlin.math.max
 
 object RightPanelOutputHandler : ScratchOutputHandler {
     private const val maxLineLength = 120
@@ -94,26 +96,36 @@ object RightPanelOutputHandler : ScratchOutputHandler {
 
 var Editor.outputManager: PreviewOutputManager? by UserDataProperty(Key.create("outputManager"))
 
-class OutputBlock(val expression: ScratchExpression, val previewEditorOffset: Int) {
+class OutputBlock {
+    var lineStart: Int = -1
+    var lineEnd: Int = -1
     var foldRegion: FoldRegion? = null
-    private val output: MutableList<ScratchOutput> = mutableListOf()
+    var output: MutableList<ScratchOutput> = mutableListOf()
 }
 
+val OutputBlock.height: Int get() = lineEnd - lineStart + 1
+val ScratchExpression.height: Int get() = lineEnd - lineStart + 1
+
 class PreviewOutputManager(private val previewEditor: Editor) {
-    val collected: NavigableMap<ScratchExpression, MutableList<ScratchOutput>> = TreeMap(Comparator.comparingInt { it.lineStart })
-    val collected_: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
+    val collected: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
 
     // TODO-fedochet this method heavily expects that output is passed sequentially from top to bottom of the worksheet
     fun addOutput(expression: ScratchExpression, output: ScratchOutput) {
-        val currentExpressionOutput = collected.getOrPut(expression) { mutableListOf() }
-        val isFirstOutputForExpression = currentExpressionOutput.isEmpty()
-        currentExpressionOutput.add(output)
+        val currentExpressionOutput = collected.getOrPut(expression) { OutputBlock() }
+        val isFirstOutputForExpression = currentExpressionOutput.output.isEmpty()
+        currentExpressionOutput.output.add(output)
 
         val previewEditorDocument = previewEditor.document
-        val previousExpression: ScratchExpression? = collected.lowerKey(expression)
+        val previousExpressionEntry = collected.lowerEntry(expression)
 
         val distanceFromLastPrintedOutput = if (isFirstOutputForExpression) {
-            expression.lineStart - (previousExpression?.let { min(it.lineEnd, previewEditorDocument.lineCount - 1) } ?: 0)
+            if (previousExpressionEntry != null) {
+                val (previousExpression, previousOutput) = previousExpressionEntry
+
+                expression.lineStart - previousExpression.lineEnd + max(previousExpression.height - previousOutput.height, 0)
+            } else {
+                expression.lineStart
+            }
         } else {
             0
         }
@@ -124,45 +136,45 @@ class PreviewOutputManager(private val previewEditor: Editor) {
             else -> "\n"
         }
 
+        if (isFirstOutputForExpression) {
+            currentExpressionOutput.lineStart = (DiffUtil.getLineCount(previewEditorDocument) - 1) + distanceFromLastPrintedOutput
+        }
+
         runWriteAction {
             executeCommand {
                 previewEditorDocument.insertString(previewEditorDocument.textLength, prefix + output.text)
             }
         }
 
-        val currentBlockCombined = currentExpressionOutput.joinToString(separator = "\n") { it.text }
-        val maximumNumberOfLines = expression.lineEnd - expression.lineStart + 1
-        val actualLines = currentBlockCombined.lines()
+        currentExpressionOutput.lineEnd = DiffUtil.getLineCount(previewEditorDocument) - 1
 
-        if (actualLines.size > maximumNumberOfLines) {
-            val foldedLines = actualLines.subList(maximumNumberOfLines - 1, actualLines.size)
-            val placeholderLine = foldedLines.first()
-            val foldedLinesLength = foldedLines.sumBy { it.length } + foldedLines.size - 1
+        val maximumNumberOfLines = expression.height
+        val actualNumberOfLines = currentExpressionOutput.height
+
+        if (actualNumberOfLines > maximumNumberOfLines) {
+            val firstFoldedLine = currentExpressionOutput.lineStart + (maximumNumberOfLines - 1)
+            val placeholderLine = previewEditorDocument.getLineContent(firstFoldedLine)
 
             val foldingModel = previewEditor.foldingModel
             foldingModel.runBatchFoldingOperation {
-                foldingModel.allFoldRegions.forEach {
-                    if (it.startOffset >= previewEditorDocument.textLength - foldedLinesLength) {
-                        foldingModel.removeFoldRegion(it)
-                    }
-                }
+                currentExpressionOutput.foldRegion?.let(foldingModel::removeFoldRegion)
 
-                val foldRegion = foldingModel.addFoldRegion(
-                    previewEditorDocument.textLength - foldedLinesLength,
+                currentExpressionOutput.foldRegion = foldingModel.addFoldRegion(
+                    previewEditorDocument.getLineStartOffset(firstFoldedLine),
                     previewEditorDocument.textLength,
                     placeholderLine
                 )
 
-                foldRegion?.isExpanded = false
+                currentExpressionOutput.foldRegion?.isExpanded = false
             }
         }
-    }
-
-    fun addOutput_(expression: ScratchExpression, output: ScratchOutput) {
-
     }
 
     fun clear() {
         collected.clear()
     }
 }
+
+private fun Document.getLineContent(lineNumber: Int) =
+    DiffUtil.getLinesContent(this, lineNumber, lineNumber + 1).toString()
+

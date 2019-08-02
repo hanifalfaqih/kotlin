@@ -19,6 +19,7 @@ import com.intellij.testFramework.FileEditorManagerTestCase
 import com.intellij.testFramework.MapDataContext
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.TestActionEvent
+import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import com.intellij.util.ui.UIUtil
 import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
 import org.jetbrains.kotlin.idea.KotlinLanguage
@@ -31,6 +32,7 @@ import org.jetbrains.kotlin.idea.scratch.actions.ScratchCompilationSupport
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchFileRenderer
 import org.jetbrains.kotlin.idea.scratch.output.getInlays
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
+import org.jetbrains.kotlin.idea.scratch.ui.pairedPreviewEditor
 import org.jetbrains.kotlin.idea.test.KotlinLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.PluginTestCaseBase
@@ -44,6 +46,24 @@ import org.junit.Assert
 import java.io.File
 
 abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
+
+    fun doRightPanelOutputTest(fileName: String) {
+        val sourceFile = File(testDataPath, fileName)
+        val expectedPreviewOutput = File(testDataPath, fileName.replace(".kts", ".preview"))
+        val fileText = sourceFile.readText().inlinePropertiesValues()
+
+        configureScratchByText(sourceFile.name, fileText)
+
+        if (!KotlinHighlightingUtil.shouldHighlight(myFixture.file)) error("Highlighting for scratch file is switched off")
+
+        launchScratch()
+        waitUntilScratchFinishes()
+
+        val previewEditor = myFixture.editor.pairedPreviewEditor ?: error("No preview editor found")
+        val previewTextWithFoldings = CodeInsightTestFixtureImpl.getFoldingData(previewEditor, /*withCollapseData=*/false)
+
+        KotlinTestUtils.assertEqualsToFile(expectedPreviewOutput, previewTextWithFoldings)
+    }
 
     fun doWorksheetReplTest(fileName: String) {
         doTest(fileName = fileName, isRepl = true, isWorksheet = true)

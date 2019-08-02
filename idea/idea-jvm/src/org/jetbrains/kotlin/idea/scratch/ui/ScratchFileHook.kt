@@ -20,6 +20,7 @@ import com.intellij.diff.tools.util.BaseSyncScrollable
 import com.intellij.diff.tools.util.SyncScrollSupport
 import com.intellij.diff.util.Side
 import com.intellij.ide.DataManager
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.components.ProjectComponent
@@ -30,11 +31,15 @@ import com.intellij.openapi.editor.event.VisibleAreaListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.ui.JBSplitter
+import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.scratch.*
 import org.jetbrains.kotlin.idea.scratch.output.outputManager
+import org.jetbrains.kotlin.psi.UserDataProperty
 import javax.swing.JComponent
 
 class ScratchFileHook(val project: Project) : ProjectComponent {
@@ -55,6 +60,10 @@ class ScratchFileHook(val project: Project) : ProjectComponent {
 
             val previewEditor = configurePreviewEditor(project)
             val editorComponent = editor.editor.component
+
+            editor.editor.pairedPreviewEditor = previewEditor
+
+            Disposer.register(editor, Disposable { EditorFactory.getInstance().releaseEditor(previewEditor) })
 
             val parent = editorComponent.parent
             parent.remove(editorComponent)
@@ -108,6 +117,11 @@ class ScratchFileHook(val project: Project) : ProjectComponent {
         return ScratchFileLanguageProvider.get(psiFile.fileType) != null
     }
 }
+
+var Editor.pairedPreviewEditor: Editor? by UserDataProperty(Key.create("pairedPreviewEditor"))
+    @TestOnly
+    get
+    private set
 
 private fun configurePreviewEditor(project: Project): Editor {
     val factory = EditorFactory.getInstance()
