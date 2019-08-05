@@ -20,10 +20,6 @@ import java.util.*
 import kotlin.math.max
 
 object RightPanelOutputHandler : ScratchOutputHandler {
-    private const val maxLineLength = 120
-    private const val maxInsertOffset = 60
-    private const val minSpaceCount = 4
-
     override fun onStart(file: ScratchFile) {
         getToolwindowHandler().onStart(file)
     }
@@ -68,28 +64,6 @@ object RightPanelOutputHandler : ScratchOutputHandler {
             }
 
             outputManager.addOutput(expression, output)
-//            for ((curr, value) in collected) {
-//                for (out in value) {
-//                    val linesDifference = curr.lineStart - previewEditorDocument.lineCount
-//                    val prefix = if (linesDifference > 0) "\n".repeat(linesDifference + 1) else ""
-//
-//                    runWriteAction {
-//                        executeCommand {
-//                            val initialLength = previewEditorDocument.textLength
-//                            previewEditorDocument.insertString(initialLength, prefix + out.text)
-//                            file.previewEditor.foldingModel.runBatchFoldingOperation {
-//                                file.previewEditor.foldingModel
-//                                    .addFoldRegion(
-//                                        previewEditorDocument.textLength - out.text.length,
-//                                        previewEditorDocument.textLength,
-//                                        out.text.take(3)
-//                                    )
-//                                    ?.apply { isExpanded = false }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
         })
     }
 }
@@ -127,14 +101,10 @@ class PreviewOutputManager(private val previewEditor: Editor) {
                 expression.lineStart
             }
         } else {
-            0
+            1
         }
 
-        val prefix = when {
-            distanceFromLastPrintedOutput > 0 -> "\n".repeat(distanceFromLastPrintedOutput)
-            isFirstOutputForExpression -> ""
-            else -> "\n"
-        }
+        val prefix = "\n".repeat(max(distanceFromLastPrintedOutput, 0))
 
         if (isFirstOutputForExpression) {
             currentExpressionOutput.lineStart = (DiffUtil.getLineCount(previewEditorDocument) - 1) + distanceFromLastPrintedOutput
@@ -153,7 +123,7 @@ class PreviewOutputManager(private val previewEditor: Editor) {
 
         if (actualNumberOfLines > maximumNumberOfLines) {
             val firstFoldedLine = currentExpressionOutput.lineStart + (maximumNumberOfLines - 1)
-            val placeholderLine = previewEditorDocument.getLineContent(firstFoldedLine)
+            val placeholderLine = "${previewEditorDocument.getLineContent(firstFoldedLine)}..."
 
             val foldingModel = previewEditor.foldingModel
             foldingModel.runBatchFoldingOperation {
@@ -161,7 +131,7 @@ class PreviewOutputManager(private val previewEditor: Editor) {
 
                 currentExpressionOutput.foldRegion = foldingModel.addFoldRegion(
                     previewEditorDocument.getLineStartOffset(firstFoldedLine),
-                    previewEditorDocument.textLength,
+                    previewEditorDocument.getLineEndOffset(currentExpressionOutput.lineEnd),
                     placeholderLine
                 )
 

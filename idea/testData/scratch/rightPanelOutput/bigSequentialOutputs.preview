@@ -10,10 +10,10 @@ Hello world
 
 Hello world
 Hello world
-<fold text='Hello world'>Hello world
+<fold text='Hello world...'>Hello world
 Hello world</fold>
 
-<fold text='Hello world'>Hello world
+<fold text='Hello world...'>Hello world
 Hello world
 Hello world</fold>
 

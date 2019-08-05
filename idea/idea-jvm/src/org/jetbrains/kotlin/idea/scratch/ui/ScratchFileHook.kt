@@ -18,7 +18,6 @@ package org.jetbrains.kotlin.idea.scratch.ui
 
 import com.intellij.diff.tools.util.BaseSyncScrollable
 import com.intellij.diff.tools.util.SyncScrollSupport
-import com.intellij.diff.util.Side
 import com.intellij.ide.DataManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -26,7 +25,6 @@ import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.components.ProjectComponent
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.event.VisibleAreaEvent
 import com.intellij.openapi.editor.event.VisibleAreaListener
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
@@ -75,25 +73,7 @@ class ScratchFileHook(val project: Project) : ProjectComponent {
 
             parent.add(jbSplitter)
 
-            val scrollSupport =
-                SyncScrollSupport.TwosideSyncScrollSupport(listOf(editor.editor, previewEditor), object : BaseSyncScrollable() {
-                    val leftEditor = editor.editor
-                    val rightEditor = previewEditor
-
-                    override fun processHelper(helper: ScrollHelper) {
-                        if (!helper.process(0, 0)) return
-
-                        val collectedElements = rightEditor.outputManager?.collected ?: return
-
-                        for ((expr, output) in collectedElements) {
-
-                        }
-
-                        helper.process(leftEditor.document.lineCount, rightEditor.document.lineCount)
-                    }
-
-                    override fun isSyncScrollEnabled(): Boolean = true
-                })
+            val scrollSupport = configureTwoSideSyncScrollSupport(editor.editor, previewEditor)
 
             val listener = VisibleAreaListener { e ->
                 scrollSupport.visibleAreaChanged(e)
@@ -118,14 +98,13 @@ class ScratchFileHook(val project: Project) : ProjectComponent {
     }
 }
 
-var Editor.pairedPreviewEditor: Editor? by UserDataProperty(Key.create("pairedPreviewEditor"))
-    @TestOnly
-    get
-    private set
-
 private fun configurePreviewEditor(project: Project): Editor {
     val factory = EditorFactory.getInstance()
     val previewEditor = factory.createViewer(factory.createDocument(""), project)
+
+    previewEditor.settings.isLineMarkerAreaShown = false
+    previewEditor.settings.isLineNumbersShown = false
+    previewEditor.setBorder(null)
 
     val editorParent = previewEditor.contentComponent.parent
     if (editorParent is JComponent) {
@@ -137,3 +116,30 @@ private fun configurePreviewEditor(project: Project): Editor {
 
     return previewEditor
 }
+
+private fun configureTwoSideSyncScrollSupport(
+    mainEditor: Editor,
+    previewEditor: Editor
+): SyncScrollSupport.TwosideSyncScrollSupport {
+    return SyncScrollSupport.TwosideSyncScrollSupport(listOf(mainEditor, previewEditor), object : BaseSyncScrollable() {
+        override fun processHelper(helper: ScrollHelper) {
+            if (!helper.process(0, 0)) return
+
+            val collectedElements = previewEditor.outputManager?.collected ?: return
+
+            for ((expr, output) in collectedElements) {
+                if (!helper.process(expr.lineStart, output.lineStart)) return
+                if (!helper.process(expr.lineEnd, output.lineEnd)) return
+            }
+
+            helper.process(mainEditor.document.lineCount, previewEditor.document.lineCount)
+        }
+
+        override fun isSyncScrollEnabled(): Boolean = true
+    })
+}
+
+var Editor.pairedPreviewEditor: Editor? by UserDataProperty(Key.create("pairedPreviewEditor"))
+    @TestOnly
+    get
+    private set
