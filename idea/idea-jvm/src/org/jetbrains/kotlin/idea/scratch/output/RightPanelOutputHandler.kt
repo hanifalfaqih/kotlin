@@ -12,7 +12,9 @@ import com.intellij.openapi.command.executeCommand
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
+import com.intellij.openapi.editor.FoldingModel
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.psi.UserDataProperty
@@ -43,8 +45,8 @@ object RightPanelOutputHandler : ScratchOutputHandler {
     }
 
     override fun clear(file: ScratchFile) {
-        file.previewEditor.outputManager?.clear()
-        file.previewEditor.outputManager = null
+        file.previewEditor.previewOutputBlocksManager?.clear()
+        file.previewEditor.previewOutputBlocksManager = null
 
         TransactionGuard.submitTransaction(file.project, Runnable {
             runWriteAction {
@@ -57,94 +59,114 @@ object RightPanelOutputHandler : ScratchOutputHandler {
 
     private fun printToWindow(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
         TransactionGuard.submitTransaction(file.project, Runnable {
-            val outputManager = file.previewEditor.outputManager ?: run {
-                val previewOutputManager = PreviewOutputManager(file.previewEditor)
-                file.previewEditor.outputManager = previewOutputManager
+            val outputManager = file.previewEditor.previewOutputBlocksManager ?: run {
+                val previewOutputManager = PreviewOutputBlocksManager(file.previewEditor.document, file.previewEditor.foldingModel)
+                file.previewEditor.previewOutputBlocksManager = previewOutputManager
                 previewOutputManager
             }
 
-            outputManager.addOutput(expression, output)
+            val targetCell = outputManager.getBlock(expression) ?: outputManager.addBlockToTheEnd(expression)
+            targetCell.addOutput(output)
         })
     }
 }
 
-var Editor.outputManager: PreviewOutputManager? by UserDataProperty(Key.create("outputManager"))
+var Editor.previewOutputBlocksManager: PreviewOutputBlocksManager? by UserDataProperty(Key.create("outputManager"))
 
-class OutputBlock {
-    var lineStart: Int = -1
-    var lineEnd: Int = -1
-    var foldRegion: FoldRegion? = null
-    var output: MutableList<ScratchOutput> = mutableListOf()
-}
+private val ScratchExpression.height: Int get() = lineEnd - lineStart + 1
 
-val OutputBlock.height: Int get() = lineEnd - lineStart + 1
-val ScratchExpression.height: Int get() = lineEnd - lineStart + 1
+class PreviewOutputBlocksManager(private val targetDocument: Document, private val foldingModel: FoldingModel) {
 
-class PreviewOutputManager(private val previewEditor: Editor) {
-    val collected: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
+    private val blocks: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
 
-    // TODO-fedochet this method heavily expects that output is passed sequentially from top to bottom of the worksheet
-    fun addOutput(expression: ScratchExpression, output: ScratchOutput) {
-        val currentExpressionOutput = collected.getOrPut(expression) { OutputBlock() }
-        val isFirstOutputForExpression = currentExpressionOutput.output.isEmpty()
-        currentExpressionOutput.output.add(output)
+    val alignments: List<Pair<Int, Int>> get() = blocks.values.map { it.sourceExpression.lineStart to it.lineStart }
 
-        val previewEditorDocument = previewEditor.document
-        val previousExpressionEntry = collected.lowerEntry(expression)
+    fun getBlock(expression: ScratchExpression): OutputBlock? = blocks[expression]
 
-        val distanceFromLastPrintedOutput = if (isFirstOutputForExpression) {
-            if (previousExpressionEntry != null) {
-                val (previousExpression, previousOutput) = previousExpressionEntry
-
-                expression.lineStart - previousExpression.lineEnd + max(previousExpression.height - previousOutput.height, 0)
-            } else {
-                expression.lineStart
-            }
-        } else {
-            1
-        }
-
-        val prefix = "\n".repeat(max(distanceFromLastPrintedOutput, 0))
-
-        if (isFirstOutputForExpression) {
-            currentExpressionOutput.lineStart = (DiffUtil.getLineCount(previewEditorDocument) - 1) + distanceFromLastPrintedOutput
-        }
-
-        runWriteAction {
-            executeCommand {
-                previewEditorDocument.insertString(previewEditorDocument.textLength, prefix + output.text)
-            }
-        }
-
-        currentExpressionOutput.lineEnd = DiffUtil.getLineCount(previewEditorDocument) - 1
-
-        val maximumNumberOfLines = expression.height
-        val actualNumberOfLines = currentExpressionOutput.height
-
-        if (actualNumberOfLines > maximumNumberOfLines) {
-            val firstFoldedLine = currentExpressionOutput.lineStart + (maximumNumberOfLines - 1)
-            val placeholderLine = "${previewEditorDocument.getLineContent(firstFoldedLine)}..."
-
-            val foldingModel = previewEditor.foldingModel
-            foldingModel.runBatchFoldingOperation {
-                currentExpressionOutput.foldRegion?.let(foldingModel::removeFoldRegion)
-
-                currentExpressionOutput.foldRegion = foldingModel.addFoldRegion(
-                    previewEditorDocument.getLineStartOffset(firstFoldedLine),
-                    previewEditorDocument.getLineEndOffset(currentExpressionOutput.lineEnd),
-                    placeholderLine
-                )
-
-                currentExpressionOutput.foldRegion?.isExpanded = false
-            }
+    fun addBlockToTheEnd(expression: ScratchExpression): OutputBlock = OutputBlock(expression).also {
+        if (blocks.putIfAbsent(expression, it) != null) {
+            error("There is already a cell for $expression!")
         }
     }
 
     fun clear() {
-        collected.clear()
+        blocks.clear()
+    }
+
+    inner class OutputBlock(val sourceExpression: ScratchExpression) {
+        private val outputs: MutableList<ScratchOutput> = mutableListOf()
+
+        var lineStart: Int = computeCellLineStart(sourceExpression)
+            private set
+
+        val lineEnd: Int get() = lineStart + countNewLines(outputs)
+        val height: Int get() = lineEnd - lineStart + 1
+
+        private var foldRegion: FoldRegion? = null
+
+        fun addOutput(output: ScratchOutput) {
+            val beforeAdding = lineEnd
+            outputs.add(output)
+
+            val currentOutputStartLine = if (outputs.size == 1) lineStart else beforeAdding + 1
+            runWriteAction {
+                executeCommand {
+                    targetDocument.insertStringAtLine(currentOutputStartLine, output.text)
+                }
+            }
+
+            blocks.tailMap(sourceExpression).values.forEach {
+                it.recalculatePosition()
+                it.updateFolding()
+            }
+        }
+
+        private fun recalculatePosition() {
+            lineStart = computeCellLineStart(sourceExpression)
+        }
+
+        private fun updateFolding() {
+            foldingModel.runBatchFoldingOperation {
+                foldRegion?.let(foldingModel::removeFoldRegion)
+
+                if (height <= sourceExpression.height) return@runBatchFoldingOperation
+
+                val firstFoldedLine = lineStart + (sourceExpression.height - 1)
+                val placeholderLine = "${targetDocument.getLineContent(firstFoldedLine)}..."
+
+                foldRegion = foldingModel.addFoldRegion(
+                    targetDocument.getLineStartOffset(firstFoldedLine),
+                    targetDocument.getLineEndOffset(lineEnd),
+                    placeholderLine
+                )
+
+                foldRegion?.isExpanded = isLastCell && isOutputSmall
+            }
+        }
+
+        private val isLastCell: Boolean get() = false // blocks.higherEntry(sourceExpression) == null
+        private val isOutputSmall: Boolean get() = true
+    }
+
+    private fun computeCellLineStart(scratchExpression: ScratchExpression): Int {
+        val previous = blocks.lowerEntry(scratchExpression)?.value ?: return scratchExpression.lineStart
+
+        val distanceBetweenSources = scratchExpression.lineStart - previous.sourceExpression.lineEnd
+        val differenceBetweenSourceAndOutputHeight = previous.sourceExpression.height - previous.height
+        val compensation = max(differenceBetweenSourceAndOutputHeight, 0)
+        return previous.lineEnd + compensation + distanceBetweenSources
     }
 }
+
+private fun countNewLines(list: List<ScratchOutput>) = list.sumBy { StringUtil.countNewLines(it.text) } + max(list.size - 1, 0)
 
 private fun Document.getLineContent(lineNumber: Int) =
     DiffUtil.getLinesContent(this, lineNumber, lineNumber + 1).toString()
 
+fun Document.insertStringAtLine(lineNumber: Int, text: String) {
+    while (DiffUtil.getLineCount(this) <= lineNumber) {
+        insertString(textLength, "\n")
+    }
+
+    insertString(getLineStartOffset(lineNumber), text)
+}

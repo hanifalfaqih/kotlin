@@ -36,7 +36,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.ui.JBSplitter
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.scratch.*
-import org.jetbrains.kotlin.idea.scratch.output.outputManager
+import org.jetbrains.kotlin.idea.scratch.output.previewOutputBlocksManager
 import org.jetbrains.kotlin.psi.UserDataProperty
 import javax.swing.JComponent
 
@@ -125,11 +125,10 @@ private fun configureTwoSideSyncScrollSupport(
         override fun processHelper(helper: ScrollHelper) {
             if (!helper.process(0, 0)) return
 
-            val collectedElements = previewEditor.outputManager?.collected ?: return
+            val collectedElements = previewEditor.previewOutputBlocksManager?.alignments ?: return
 
-            for ((expr, output) in collectedElements) {
-                if (!helper.process(expr.lineStart, output.lineStart)) return
-                if (!helper.process(expr.lineEnd, output.lineEnd)) return
+            for ((left, right) in collectedElements) {
+                if (!helper.process(left, right)) return
             }
 
             helper.process(mainEditor.document.lineCount, previewEditor.document.lineCount)
