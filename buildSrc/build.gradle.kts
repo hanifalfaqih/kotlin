@@ -53,6 +53,10 @@ gradlePlugin {
             id = "jps-compatible"
             implementationClass = "org.jetbrains.kotlin.pill.JpsCompatiblePlugin"
         }
+        register("published-kotlin-module") {
+            id = "published-kotlin-module"
+            implementationClass = "plugins.PublishedKotlinModule"
+        }
     }
 }
 
