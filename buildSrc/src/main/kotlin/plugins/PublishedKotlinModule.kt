@@ -34,7 +34,7 @@ open class PublishedKotlinModule : Plugin<Project> {
                 plugins.apply("signing")
 
                 val signingRequired = project.findProperty("signingRequired")?.toString()?.toBooleanOrNull()
-                                      ?: project.property("isSonatypeRelease") as Boolean
+                    ?: project.property("isSonatypeRelease") as Boolean
 
                 configure<SigningExtension> {
                     isRequired = signingRequired
@@ -84,6 +84,18 @@ open class PublishedKotlinModule : Plugin<Project> {
                 pom.whenConfigured {
                     dependencies.removeIf {
                         InvokerHelper.getMetaClass(it).getProperty(it, "scope") == "test"
+                    }
+
+                    val builtinsRemoved = dependencies.removeIf {
+                        InvokerHelper.getMetaClass(it).getProperty(it, "groupId") == "org.jetbrains.kotlin"
+                                && InvokerHelper.getMetaClass(it).getProperty(it, "artifactId") == "builtins"
+                    }
+
+                    if (builtinsRemoved) {
+                        logger.warn(
+                            "WARNING! Removed dependency on builtins from ${this.artifactId} artifact's maven metadata, " +
+                                    "builtins dependency in  ${project.path} project should be 'compileOnly'"
+                        )
                     }
 
                     dependencies
@@ -139,7 +151,7 @@ open class PublishedKotlinModule : Plugin<Project> {
             }
 
             val install = if (tasks.names.contains("install")) tasks.getByName("install") as Upload
-                          else tasks.create("install", Upload::class.java)
+            else tasks.create("install", Upload::class.java)
             install.apply {
                 configuration = project.configurations.getByName(Dependency.ARCHIVES_CONFIGURATION)
                 description = "Installs the 'archives' artifacts into the local Maven repository."
