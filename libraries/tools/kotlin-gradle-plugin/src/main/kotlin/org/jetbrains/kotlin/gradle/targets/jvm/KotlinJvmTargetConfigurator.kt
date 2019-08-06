@@ -32,8 +32,7 @@ class KotlinJvmTargetConfigurator(kotlinPluginVersion: String) :
             testTask.project.tasks.findByName(JavaBasePlugin.CHECK_TASK_NAME)?.dependsOn(testTask)
         }
 
-        @Suppress("UNCHECKED_CAST")
-        testTask = testTaskOrProvider.getTaskOrProvider() as TaskProvider<KotlinJvmTest>
+        testTask = testTaskOrProvider
 
         val testCompilation = target.compilations.getByName(KotlinCompilation.TEST_COMPILATION_NAME)
 
@@ -47,7 +46,7 @@ class KotlinJvmTargetConfigurator(kotlinPluginVersion: String) :
             }
         }
 
-        target.project.kotlinTestRegistry.registerTestTask(testTaskOrProvider)
+        target.project.kotlinTestRegistry.registerTestTask(target.project, testTaskOrProvider)
     }
 
     override fun buildCompilationProcessor(compilation: KotlinJvmCompilation): KotlinSourceSetProcessor<*> {

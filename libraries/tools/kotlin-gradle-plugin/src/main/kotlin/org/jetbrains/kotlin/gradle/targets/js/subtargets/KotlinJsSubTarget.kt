@@ -98,8 +98,9 @@ abstract class KotlinJsSubTarget(
         testRun.testTask = testJs
 
         target.project.kotlinTestRegistry.registerTestTask(
+            project,
             testJs,
-            target.testRuns.maybeCreate(testRun.name).testTask.get() // FIXME eager task instantiation
+            target.testRuns.maybeCreate(testRun.name).testTask
         )
 
         project.whenEvaluated {
