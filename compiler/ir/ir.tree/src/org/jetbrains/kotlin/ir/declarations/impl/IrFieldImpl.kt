@@ -54,9 +54,19 @@ class IrFieldImpl(
         symbol: IrFieldSymbol,
         type: IrType
     ) :
+            this(startOffset, endOffset, origin, symbol, type, symbol.descriptor.visibility)
+
+    constructor(
+        startOffset: Int,
+        endOffset: Int,
+        origin: IrDeclarationOrigin,
+        symbol: IrFieldSymbol,
+        type: IrType,
+        visibility: Visibility
+    ) :
             this(
                 startOffset, endOffset, origin, symbol,
-                symbol.descriptor.name, type, symbol.descriptor.visibility,
+                symbol.descriptor.name, type, visibility,
                 isFinal = !symbol.descriptor.isVar,
                 isExternal = symbol.descriptor.isEffectivelyExternal(),
                 isStatic = symbol.descriptor.dispatchReceiverParameter == null

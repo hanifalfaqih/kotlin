@@ -5,9 +5,7 @@
 
 package org.jetbrains.kotlin.psi2ir.generators
 
-import org.jetbrains.kotlin.descriptors.CallableDescriptor
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
-import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.types.KotlinType
 
@@ -31,4 +29,11 @@ open class GeneratorExtensions {
 
         companion object Instance : SamConversion()
     }
+
+    open fun computeFieldVisibility(descriptor: PropertyDescriptor): Visibility =
+        when {
+            descriptor.isLateInit -> descriptor.setter?.visibility ?: descriptor.visibility
+            descriptor.isConst -> descriptor.visibility
+            else -> Visibilities.PRIVATE
+        }
 }

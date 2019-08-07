@@ -288,6 +288,25 @@ open class SymbolTable : ReferenceSymbolTable {
 
     val unboundEnumEntries: Set<IrEnumEntrySymbol> get() = enumEntrySymbolTable.unboundSymbols
 
+    fun declareFieldWithVisibility(
+        startOffset: Int,
+        endOffset: Int,
+        origin: IrDeclarationOrigin,
+        descriptor: PropertyDescriptor,
+        type: IrType,
+        visibility: Visibility,
+        fieldFactory: (IrFieldSymbol) -> IrField = {
+            IrFieldImpl(startOffset, endOffset, origin, it, type, visibility).apply {
+                metadata = MetadataSource.Property(it.descriptor)
+            }
+        }
+    ): IrField =
+        fieldSymbolTable.declare(
+            descriptor,
+            { IrFieldSymbolImpl(descriptor) },
+            fieldFactory
+        )
+
     fun declareField(
         startOffset: Int,
         endOffset: Int,
