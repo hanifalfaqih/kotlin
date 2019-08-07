@@ -50,7 +50,7 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val targets = buildTargets(sourceSetMap, dependencyResolver, project, dependencyMapper) ?: return null
         computeSourceSetsDeferredInfo(sourceSetMap, targets, isHMPPEnabled(project))
         val coroutinesState = getCoroutinesState(project)
-        reportUnresolvedDependencies(targets)
+        reportUnresolvedDependencies(targets, dependencyMapper)
         val kotlinNativeHome = KotlinNativeHomeEvaluator.getKotlinNativeHome(project) ?: NO_KOTLIN_NATIVE_HOME
         return KotlinMPPGradleModelImpl(
             sourceSetMap,
@@ -66,12 +66,12 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         return (project.findProperty("kotlin.mpp.enableGranularSourceSetsMetadata") as? String)?.toBoolean() ?: false
     }
 
-    private fun reportUnresolvedDependencies(targets: Collection<KotlinTarget>) {
+    private fun reportUnresolvedDependencies(targets: Collection<KotlinTarget>, dependencyMapper: KotlinDependencyMapper) {
         targets
             .asSequence()
             .flatMap { it.compilations.asSequence() }
             .flatMap { it.dependencies.asSequence() }
-            .mapNotNull { (it as? UnresolvedExternalDependency)?.failureMessage }
+            .mapNotNull { (dependencyMapper.getDependency(it) as? UnresolvedExternalDependency)?.failureMessage }
             .toSet()
             .forEach { logger.warn(it) }
     }
