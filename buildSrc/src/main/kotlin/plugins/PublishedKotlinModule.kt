@@ -104,8 +104,11 @@ open class PublishedKotlinModule : Plugin<Project> {
                                     && InvokerHelper.getMetaClass(it).getProperty(it, "artifactId") == "kotlin-stdlib"
                         }
                         ?.also {
-                            InvokerHelper.getMetaClass(it).setProperty(it, "exclusions", emptyList<Any>())
-                            logger.warn("WARNING! Removed exclusions from kotlin-stdlib dependency of ${this.artifactId} artifact's maven metadata, check kotlin-stdlib dependency of ${project.path} project")
+                            val exclusions = InvokerHelper.getMetaClass(it).getProperty(it, "exclusions") as List<*>
+                            if (exclusions.isNotEmpty()) {
+                                InvokerHelper.getMetaClass(it).setProperty(it, "exclusions", emptyList<Any>())
+                                logger.warn("WARNING! Removed exclusions from kotlin-stdlib dependency of ${this.artifactId} artifact's maven metadata, check kotlin-stdlib dependency of ${project.path} project")
+                            }
                         }
                 }
             }
