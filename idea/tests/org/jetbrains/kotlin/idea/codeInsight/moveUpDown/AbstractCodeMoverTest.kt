@@ -38,10 +38,17 @@ abstract class AbstractMoveStatementTest : AbstractCodeMoverTest() {
 
     private fun doTest(path: String, defaultMoverClass: Class<out StatementUpDownMover>) {
         doTest(path) { isApplicableExpected, direction ->
+            @Suppress("DEPRECATION")
             val movers = Extensions.getExtensions(StatementUpDownMover.STATEMENT_UP_DOWN_MOVER_EP)
+
             val info = StatementUpDownMover.MoveInfo()
             val actualMover = movers.firstOrNull {
-                it.checkAvailable(LightPlatformCodeInsightTestCase.getEditor(), LightPlatformCodeInsightTestCase.getFile(), info, direction == "down")
+                it.checkAvailable(
+                    LightPlatformCodeInsightTestCase.getEditor(),
+                    LightPlatformCodeInsightTestCase.getFile(),
+                    info,
+                    direction == "down"
+                )
             } ?: error("No mover found")
 
             assertEquals("Unmatched movers", defaultMoverClass.name, actualMover::class.java.name)
@@ -52,7 +59,7 @@ abstract class AbstractMoveStatementTest : AbstractCodeMoverTest() {
 
 abstract class AbstractMoveLeftRightTest : AbstractCodeMoverTest() {
     protected fun doTest(path: String) {
-        doTest(path) { _, _ ->  }
+        doTest(path) { _, _ -> }
     }
 }
 
@@ -72,9 +79,9 @@ abstract class AbstractCodeMoverTest : LightCodeInsightTestCase() {
 
         val fileText = FileUtil.loadFile(File(path), true)
         val direction = InTextDirectivesUtils.findStringWithPrefixes(fileText, "// MOVE: ")
-                        ?: error("No MOVE directive found")
+            ?: error("No MOVE directive found")
 
-        val action = when (direction) {
+        val action: EditorAction = when (direction) {
             "up" -> MoveStatementUpAction()
             "down" -> MoveStatementDownAction()
             "left" -> MoveElementLeftAction()
@@ -111,13 +118,11 @@ abstract class AbstractCodeMoverTest : LightCodeInsightTestCase() {
                 val afterFilePath = path + ".after"
                 try {
                     checkResultByFile(afterFilePath)
-                }
-                catch (e: ComparisonFailure) {
+                } catch (e: ComparisonFailure) {
                     KotlinTestUtils.assertEqualsToFile(File(afterFilePath), editor)
                 }
             }
-        }
-        finally {
+        } finally {
             codeStyleSettings.clearCodeStyleSettings()
         }
     }

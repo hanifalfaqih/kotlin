@@ -41,7 +41,7 @@ class DefaultGradleModelFacade : KotlinGradleModelFacade {
         @Suppress("UNCHECKED_CAST") val ideProject = ideModule.parent as DataNode<ProjectData>
         val dependencyModuleNames =
             ExternalSystemApiUtil.getChildren(ideModule, ProjectKeys.MODULE_DEPENDENCY).map { it.data.target.externalName }.toHashSet()
-        return findModulesByNames(dependencyModuleNames, gradleIdeaProject, ideProject)
+        return findModulesByNames(dependencyModuleNames, ideProject)
     }
 }
 
@@ -52,7 +52,10 @@ fun DataNode<*>.getResolvedVersionByModuleData(groupId: String, libraryIds: List
 }
 
 fun getDependencyModules(moduleData: DataNode<ModuleData>, gradleIdeaProject: IdeaProject): Collection<DataNode<ModuleData>> {
-    for (modelFacade in Extensions.getExtensions(KotlinGradleModelFacade.EP_NAME)) {
+    @Suppress("DEPRECATION")
+    val extensions = Extensions.getExtensions(KotlinGradleModelFacade.EP_NAME)
+
+    for (modelFacade in extensions) {
         val dependencies = modelFacade.getDependencyModules(moduleData, gradleIdeaProject)
         if (dependencies.isNotEmpty()) {
             return dependencies
@@ -61,11 +64,7 @@ fun getDependencyModules(moduleData: DataNode<ModuleData>, gradleIdeaProject: Id
     return emptyList()
 }
 
-fun findModulesByNames(
-    dependencyModuleNames: Set<String>,
-    gradleIdeaProject: IdeaProject,
-    ideProject: DataNode<ProjectData>
-): LinkedHashSet<DataNode<ModuleData>> {
+fun findModulesByNames(dependencyModuleNames: Set<String>, ideProject: DataNode<ProjectData>): LinkedHashSet<DataNode<ModuleData>> {
     val modules = ExternalSystemApiUtil.getChildren(ideProject, ProjectKeys.MODULE)
     return modules.filterTo(LinkedHashSet()) { it.data.externalName in dependencyModuleNames }
 }
