@@ -22,7 +22,7 @@ class ScratchOptionsTest : AbstractScratchRunActionTest() {
         Assert.assertEquals(
             "This test checks that checkbox options are restored after file closing. Not all checkboxes are checked in this test",
             3,
-            ScratchTopPanel::class.declaredMemberProperties.filter { it.returnType == JCheckBox::class.createType() }.size
+            scratchPanelBeforeClosingFile::class.declaredMemberProperties.filter { it.returnType == JCheckBox::class.createType() }.size
         )
 
         val newIsReplValue = !scratchPanelBeforeClosingFile.scratchFile.options.isRepl

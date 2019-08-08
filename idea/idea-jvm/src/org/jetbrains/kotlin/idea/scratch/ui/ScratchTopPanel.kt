@@ -17,24 +17,23 @@
 package org.jetbrains.kotlin.idea.scratch.ui
 
 
-import com.intellij.application.options.ModulesComboBox
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.ui.ConfigurationModuleSelector
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.ActionToolbar
-import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ex.CheckboxAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
+import com.intellij.openapi.module.ModuleType
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.changes.committed.LabeledComboBoxAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.ui.components.panels.HorizontalLayout
 import com.intellij.util.messages.Topic
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
@@ -47,14 +46,30 @@ import org.jetbrains.kotlin.idea.scratch.actions.StopScratchAction
 import org.jetbrains.kotlin.idea.scratch.addScratchPanel
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
 import org.jetbrains.kotlin.idea.scratch.removeScratchPanel
-import javax.swing.*
+import javax.swing.JComponent
 
-class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel(HorizontalLayout(5)), Disposable {
-    override fun dispose() {
-        scratchFile.replScratchExecutor?.stop()
-        scratchFile.compilingScratchExecutor?.stop()
-        scratchFile.editor.removeScratchPanel()
-    }
+interface ScratchTopPanel : Disposable {
+    val scratchFile: ScratchFile
+    val component: JComponent
+    fun getModule(): Module?
+    fun setModule(module: Module)
+    fun hideModuleSelector()
+    fun addModuleListener(f: (PsiFile, Module?) -> Unit)
+
+    @TestOnly
+    fun setReplMode(isSelected: Boolean)
+
+    @TestOnly
+    fun setMakeBeforeRun(isSelected: Boolean)
+
+    @TestOnly
+    fun setInteractiveMode(isSelected: Boolean)
+
+    @TestOnly
+    fun isModuleSelectorVisible(): Boolean
+
+    fun changeMakeModuleCheckboxVisibility(isVisible: Boolean)
+    fun updateToolbar()
 
     companion object {
         fun createPanel(
@@ -65,7 +80,7 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         ) {
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
             val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor, previewEditor) ?: return
-            val panel = ScratchTopPanel(scratchFile)
+            val panel = ActionsScratchTopPanel(scratchFile)
 
             val toolbarHandler = createUpdateToolbarHandler(panel)
             scratchFile.replScratchExecutor?.addOutputHandler(object : ScratchOutputHandlerAdapter() {
@@ -96,51 +111,39 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
             }
         }
     }
+}
 
-    private val moduleChooser: ModulesComboBox
-    private val moduleChooserLabel: JLabel
-    private val isReplCheckbox: JCheckBox
-    private val isMakeBeforeRunCheckbox: JCheckBox
-    private val isInteractiveCheckbox: JCheckBox
+private class ActionsScratchTopPanel(override val scratchFile: ScratchFile) : ScratchTopPanel {
+    override fun dispose() {
+        scratchFile.replScratchExecutor?.stop()
+        scratchFile.compilingScratchExecutor?.stop()
+        scratchFile.editor.removeScratchPanel()
+    }
 
-    private val moduleSeparator: JSeparator
+    private val moduleChooserAction: ModulesComboBoxAction = ModulesComboBoxAction("Use classpath of module")
+
+    private val isReplCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Use REPL")
+    private val isMakeBeforeRunCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Make before run")
+    private val isInteractiveCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Interactive mode")
+
     private val actionsToolbar: ActionToolbar
 
     init {
-        actionsToolbar = createActionsToolbar()
-        add(actionsToolbar.component)
+        moduleChooserAction.addOnChangeListener { updateToolbar() }
 
-        moduleChooser = createModuleChooser(scratchFile.project)
-        moduleChooserLabel = JLabel("Use classpath of module")
-        add(moduleChooserLabel)
-        add(moduleChooser)
-
-        isMakeBeforeRunCheckbox = JCheckBox("Make module before Run")
-        add(isMakeBeforeRunCheckbox)
-        isMakeBeforeRunCheckbox.addItemListener {
+        isMakeBeforeRunCheckbox.addOnChangeListener {
             scratchFile.saveOptions {
                 copy(isMakeBeforeRun = isMakeBeforeRunCheckbox.isSelected)
             }
         }
 
-        moduleSeparator = JSeparator(SwingConstants.VERTICAL)
-        add(moduleSeparator)
-
-        changeMakeModuleCheckboxVisibility(false)
-
-        isInteractiveCheckbox = JCheckBox("Interactive mode")
-        add(isInteractiveCheckbox)
-        isInteractiveCheckbox.addItemListener {
+        isInteractiveCheckbox.addOnChangeListener {
             scratchFile.saveOptions {
                 copy(isInteractiveMode = isInteractiveCheckbox.isSelected)
             }
         }
 
-        add(JSeparator(SwingConstants.VERTICAL))
-
-        isReplCheckbox = JCheckBox("Use REPL")
-        add(isReplCheckbox)
-        isReplCheckbox.addItemListener {
+        isReplCheckbox.addOnChangeListener {
             scratchFile.saveOptions {
                 copy(isRepl = isReplCheckbox.isSelected)
             }
@@ -153,7 +156,21 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
             }
         }
 
-        add(JSeparator(SwingConstants.VERTICAL))
+        val toolbarGroup = DefaultActionGroup().apply {
+            add(RunScratchAction())
+            add(StopScratchAction())
+            addSeparator()
+            add(ClearScratchAction())
+            addSeparator()
+            add(moduleChooserAction)
+            add(isMakeBeforeRunCheckbox)
+            add(isInteractiveCheckbox)
+            add(isReplCheckbox)
+        }
+
+        actionsToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true)
+
+        changeMakeModuleCheckboxVisibility(false)
 
         scratchFile.options.let {
             isReplCheckbox.isSelected = it.isRepl
@@ -162,20 +179,21 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
         }
     }
 
-    fun getModule(): Module? = moduleChooser.selectedModule
+    override val component: JComponent = actionsToolbar.component
 
-    fun setModule(module: Module) {
-        moduleChooser.selectedModule = module
+    override fun getModule(): Module? = moduleChooserAction.selectedModule
+
+    override fun setModule(module: Module) {
+        moduleChooserAction.selectedModule = module
     }
 
-    fun hideModuleSelector() {
-        moduleChooser.isVisible = false
-        moduleChooserLabel.isVisible = false
+    override fun hideModuleSelector() {
+        moduleChooserAction.isVisible = false
     }
 
-    fun addModuleListener(f: (PsiFile, Module?) -> Unit) {
-        moduleChooser.addActionListener {
-            val selectedModule = moduleChooser.selectedModule
+    override fun addModuleListener(f: (PsiFile, Module?) -> Unit) {
+        moduleChooserAction.addOnChangeListener {
+            val selectedModule = getModule()
 
             changeMakeModuleCheckboxVisibility(selectedModule != null)
 
@@ -187,51 +205,30 @@ class ScratchTopPanel private constructor(val scratchFile: ScratchFile) : JPanel
     }
 
     @TestOnly
-    fun setReplMode(isSelected: Boolean) {
+    override fun setReplMode(isSelected: Boolean) {
         isReplCheckbox.isSelected = isSelected
     }
 
     @TestOnly
-    fun setMakeBeforeRun(isSelected: Boolean) {
+    override fun setMakeBeforeRun(isSelected: Boolean) {
         isMakeBeforeRunCheckbox.isSelected = isSelected
     }
 
     @TestOnly
-    fun setInteractiveMode(isSelected: Boolean) {
+    override fun setInteractiveMode(isSelected: Boolean) {
         isInteractiveCheckbox.isSelected = isSelected
     }
 
     @TestOnly
-    fun isModuleSelectorVisible(): Boolean = moduleChooser.isVisible && moduleChooserLabel.isVisible
+    override fun isModuleSelectorVisible(): Boolean = moduleChooserAction.isVisible
 
-    private fun changeMakeModuleCheckboxVisibility(isVisible: Boolean) {
+    override fun changeMakeModuleCheckboxVisibility(isVisible: Boolean) {
         isMakeBeforeRunCheckbox.isVisible = isVisible
-        moduleSeparator.isVisible = isVisible
     }
 
-    fun updateToolbar() {
+    override fun updateToolbar() {
         ApplicationManager.getApplication().invokeLater {
             actionsToolbar.updateActionsImmediately()
-        }
-    }
-
-    private fun createActionsToolbar(): ActionToolbar {
-        val toolbarGroup = DefaultActionGroup().apply {
-            add(RunScratchAction())
-            add(StopScratchAction())
-            addSeparator()
-            add(ClearScratchAction())
-        }
-
-        return ActionManager.getInstance().createActionToolbar(ActionPlaces.EDITOR_TOOLBAR, toolbarGroup, true)
-    }
-
-    private fun createModuleChooser(project: Project): ModulesComboBox {
-        return ModulesComboBox().apply {
-            setModules(ModuleManager.getInstance(project).modules.filter {
-                it.productionSourceInfo() != null || it.testSourceInfo() != null
-            })
-            allowEmptySelection(ConfigurationModuleSelector.NO_MODULE_TEXT)
         }
     }
 }
@@ -241,5 +238,87 @@ interface ScratchPanelListener {
 
     companion object {
         val TOPIC = Topic.create("ScratchPanelListener", ScratchPanelListener::class.java)
+    }
+}
+
+private class ListenableCheckboxAction(val label: String) : CheckboxAction(label) {
+    private val listeners: MutableList<() -> Unit> = mutableListOf()
+    var isVisible: Boolean = true
+    var isSelected: Boolean = false
+        set(value) {
+            field = value
+            listeners.forEach { it() }
+        }
+
+    override fun isSelected(e: AnActionEvent): Boolean = isSelected
+
+    override fun setSelected(e: AnActionEvent, newState: Boolean) {
+        isSelected = newState
+    }
+
+    override fun update(e: AnActionEvent) {
+        super.update(e)
+        e.presentation.isVisible = isVisible
+    }
+
+    fun addOnChangeListener(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+}
+
+private class ModulesComboBoxAction(val label: String) : LabeledComboBoxAction(label) {
+    private val listeners: MutableList<() -> Unit> = mutableListOf()
+
+    var selectedModule: Module? = null
+        set(value) {
+            field = value
+            listeners.forEach { it() }
+        }
+
+    var isVisible: Boolean = true
+
+    override fun createPopupActionGroup(button: JComponent?): DefaultActionGroup =
+        throw UnsupportedOperationException("Should not be called!")
+
+    override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
+        val project = dataContext.getData(CommonDataKeys.PROJECT)
+
+        val actionGroup = DefaultActionGroup(ModuleIsNotSelectedAction(ConfigurationModuleSelector.NO_MODULE_TEXT))
+
+        if (project != null) {
+            val modules = ModuleManager.getInstance(project).modules.filter {
+                it.productionSourceInfo() != null || it.testSourceInfo() != null
+            }
+
+            actionGroup.addAll(modules.map { SelectModuleAction(it) })
+        }
+
+        return actionGroup
+    }
+
+    override fun update(e: AnActionEvent) {
+        super.update(e)
+        e.presentation.apply {
+            icon = selectedModule?.let { ModuleType.get(it).icon }
+            text = selectedModule?.name ?: ConfigurationModuleSelector.NO_MODULE_TEXT
+        }
+
+        e.presentation.isVisible = isVisible
+    }
+
+    fun addOnChangeListener(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+
+    private inner class ModuleIsNotSelectedAction(placeholder: String) : DumbAwareAction(placeholder) {
+        override fun actionPerformed(e: AnActionEvent) {
+            selectedModule = null
+        }
+    }
+
+    private inner class SelectModuleAction(private val module: Module) : DumbAwareAction(module.name, null, ModuleType.get(module).icon) {
+        override fun actionPerformed(e: AnActionEvent) {
+            selectedModule = module
+        }
     }
 }
