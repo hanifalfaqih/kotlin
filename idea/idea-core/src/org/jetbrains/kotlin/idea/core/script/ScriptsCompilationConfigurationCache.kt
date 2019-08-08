@@ -15,17 +15,22 @@ import com.intellij.openapi.roots.ModuleRootEvent
 import com.intellij.openapi.roots.ModuleRootListener
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.OrderRootType
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.NonClasspathDirectoriesScope
+import com.intellij.util.containers.ConcurrentFactoryMap
 import com.intellij.util.containers.SLRUMap
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.jetbrains.kotlin.idea.caches.project.getAllProjectSdks
 import org.jetbrains.kotlin.idea.core.util.EDT
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
+import java.io.File
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import kotlin.properties.ReadOnlyProperty
@@ -54,31 +59,34 @@ class ScriptsCompilationConfigurationCache(private val project: Project) {
     private val scriptDependenciesCache = SLRUCacheWithLock<ScriptCompilationConfigurationResult>()
     private val scriptsModificationStampsCache = SLRUCacheWithLock<Long>()
 
-    operator fun get(virtualFile: VirtualFile): ScriptCompilationConfigurationResult? = scriptDependenciesCache.get(virtualFile)
+    operator fun get(file: KtFile): ScriptCompilationConfigurationResult? = scriptDependenciesCache.get(file)
 
-    fun shouldRunDependenciesUpdate(file: VirtualFile): Boolean {
+    fun shouldRunDependenciesUpdate(file: KtFile): Boolean {
         return scriptsModificationStampsCache.replace(file, file.modificationStamp) != file.modificationStamp
     }
 
-    private val scriptsDependenciesClasspathScopeCache = SLRUCacheWithLock<GlobalSearchScope>()
+    private val scriptsDependenciesClasspathScopeCache: MutableMap<VirtualFile, GlobalSearchScope> = ConcurrentFactoryMap.createWeakMap {
+        val ktFile = PsiManager.getInstance(project).findFile(it) as? KtFile ?: return@createWeakMap GlobalSearchScope.EMPTY_SCOPE
+
+        val compilationConfiguration = scriptDependenciesCache.get(ktFile)?.valueOrNull()
+            ?: return@createWeakMap GlobalSearchScope.EMPTY_SCOPE
+
+        val roots = compilationConfiguration.dependenciesClassPath
+        val sdk = ScriptDependenciesManager.getScriptSdk(compilationConfiguration)
+
+        @Suppress("FoldInitializerAndIfToElvis")
+        if (sdk == null) {
+            return@createWeakMap NonClasspathDirectoriesScope.compose(ScriptDependenciesManager.toVfsRoots(roots))
+        }
+
+        return@createWeakMap NonClasspathDirectoriesScope.compose(
+            sdk.rootProvider.getFiles(OrderRootType.CLASSES).toList() +
+                    ScriptDependenciesManager.toVfsRoots(roots)
+        )
+    }
 
     fun scriptDependenciesClassFilesScope(file: VirtualFile): GlobalSearchScope {
-        return scriptsDependenciesClasspathScopeCache.getOrPut(file) {
-            val compilationConfiguration = scriptDependenciesCache.get(file)?.valueOrNull() ?: return@getOrPut GlobalSearchScope.EMPTY_SCOPE
-            val roots = compilationConfiguration.dependenciesClassPath
-
-            val sdk = ScriptDependenciesManager.getScriptSdk(compilationConfiguration)
-
-            @Suppress("FoldInitializerAndIfToElvis")
-            if (sdk == null) {
-                return@getOrPut NonClasspathDirectoriesScope.compose(ScriptDependenciesManager.toVfsRoots(roots))
-            }
-
-            return@getOrPut NonClasspathDirectoriesScope.compose(
-                sdk.rootProvider.getFiles(OrderRootType.CLASSES).toList() +
-                        ScriptDependenciesManager.toVfsRoots(roots)
-            )
-        }
+        return scriptsDependenciesClasspathScopeCache[file] ?: GlobalSearchScope.EMPTY_SCOPE
     }
 
     val allSdks by ClearableLazyValue(cacheLock) {
@@ -126,7 +134,7 @@ class ScriptsCompilationConfigurationCache(private val project: Project) {
         return filterNot { moduleSdks.contains(it) }
     }
 
-    private fun onChange(files: List<VirtualFile>) {
+    private fun onChange(files: List<KtFile>) {
         clearCaches()
         updateHighlighting(files)
     }
@@ -151,20 +159,19 @@ class ScriptsCompilationConfigurationCache(private val project: Project) {
         kotlinScriptDependenciesClassFinder.clearCache()
     }
 
-    private fun updateHighlighting(files: List<VirtualFile>) {
+    private fun updateHighlighting(files: List<KtFile>) {
         ScriptDependenciesModificationTracker.getInstance(project).incModificationCount()
 
         GlobalScope.launch(EDT(project)) {
             files.filter { it.isValid }.forEach {
-                PsiManager.getInstance(project).findFile(it)?.let { psiFile ->
-                    DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
-                }
+                DaemonCodeAnalyzer.getInstance(project).restart(it)
             }
         }
     }
 
     fun hasNotCachedRoots(compilationConfiguration: ScriptCompilationConfigurationWrapper): Boolean {
-        val scriptSdk = ScriptDependenciesManager.getScriptSdk(compilationConfiguration) ?: ScriptDependenciesManager.getScriptDefaultSdk(project)
+        val scriptSdk = ScriptDependenciesManager.getScriptSdk(compilationConfiguration)
+            ?: ScriptDependenciesManager.getScriptDefaultSdk(project)
         return (scriptSdk != null && !allSdks.contains(scriptSdk)) ||
                 !allDependenciesClassFiles.containsAll(ScriptDependenciesManager.toVfsRoots(compilationConfiguration.dependenciesClassPath)) ||
                 !allDependenciesSources.containsAll(ScriptDependenciesManager.toVfsRoots(compilationConfiguration.dependenciesSources))
@@ -176,23 +183,23 @@ class ScriptsCompilationConfigurationCache(private val project: Project) {
         scriptDependenciesCache.clear()
         scriptsModificationStampsCache.clear()
 
-        onChange(keys)
+        updateHighlighting(keys)
     }
 
-    fun save(virtualFile: VirtualFile, new: ScriptCompilationConfigurationResult): Boolean {
-        val old = scriptDependenciesCache.replace(virtualFile, new)
+    fun save(file: KtFile, new: ScriptCompilationConfigurationResult): Boolean {
+        val old = scriptDependenciesCache.replace(file, new)
         val changed = new != old
         if (changed) {
-            onChange(listOf(virtualFile))
+            onChange(listOf(file))
         }
 
         return changed
     }
 
-    fun delete(virtualFile: VirtualFile): Boolean {
-        val changed = scriptDependenciesCache.remove(virtualFile)
+    fun delete(file: KtFile): Boolean {
+        val changed = scriptDependenciesCache.remove(file)
         if (changed) {
-            onChange(listOf(virtualFile))
+            onChange(listOf(file))
         }
         return changed
     }
@@ -226,20 +233,19 @@ private class ClearableLazyValue<in R, out T : Any>(
     }
 }
 
-
 private class SLRUCacheWithLock<T> {
     private val lock = ReentrantReadWriteLock()
 
-    val cache = SLRUMap<VirtualFile, T>(
+    val cache = SLRUMap<KtFile, T>(
         ScriptsCompilationConfigurationCache.MAX_SCRIPTS_CACHED,
         ScriptsCompilationConfigurationCache.MAX_SCRIPTS_CACHED
     )
 
-    fun get(value: VirtualFile): T? = lock.write {
+    fun get(value: KtFile): T? = lock.write {
         cache[value]
     }
 
-    fun getOrPut(key: VirtualFile, defaultValue: () -> T): T = lock.write {
+    fun getOrPut(key: KtFile, defaultValue: () -> T): T = lock.write {
         val value = cache.get(key)
         return if (value == null) {
             val answer = defaultValue()
@@ -250,11 +256,11 @@ private class SLRUCacheWithLock<T> {
         }
     }
 
-    fun remove(file: VirtualFile) = lock.write {
+    fun remove(file: KtFile) = lock.write {
         cache.remove(file)
     }
 
-    fun getAll(): Collection<Map.Entry<VirtualFile, T>> = lock.write {
+    fun getAll(): Collection<Map.Entry<KtFile, T>> = lock.write {
         cache.entrySet()
     }
 
@@ -262,10 +268,9 @@ private class SLRUCacheWithLock<T> {
         cache.clear()
     }
 
-    fun replace(file: VirtualFile, value: T): T? = lock.write {
+    fun replace(file: KtFile, value: T): T? = lock.write {
         val old = get(file)
         cache.put(file, value)
         old
     }
 }
-

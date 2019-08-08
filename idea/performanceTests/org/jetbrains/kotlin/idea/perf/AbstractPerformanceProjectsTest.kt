@@ -383,7 +383,7 @@ abstract class AbstractPerformanceProjectsTest : UsefulTestCase() {
 
             // Note: Kotlin scripts require dependencies to be loaded
             if (isAKotlinScriptFile(fileName)) {
-                val vFile = fileInEditor.psiFile.virtualFile
+                val vFile = fileInEditor.psiFile
                 ScriptDependenciesManager.updateScriptDependenciesSynchronously(vFile, project)
             }
 

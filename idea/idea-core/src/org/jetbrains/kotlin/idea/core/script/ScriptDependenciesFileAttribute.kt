@@ -18,12 +18,20 @@ package org.jetbrains.kotlin.idea.core.script
 
 import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.idea.core.util.*
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.scripting.definitions.getScriptOriginalFile
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import java.io.*
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.dependencies.ScriptDependencies
 
-var VirtualFile.scriptDependencies: ScriptDependencies? by cachedFileAttribute(
+var KtFile.scriptDependencies: ScriptDependencies?
+    get() = this.getScriptOriginalFile()?.virtualFile?.scriptDependencies
+    set(value) {
+        this.getScriptOriginalFile()?.virtualFile?.scriptDependencies = value
+    }
+
+private var VirtualFile.scriptDependencies: ScriptDependencies? by cachedFileAttribute(
     name = "kotlin-script-dependencies",
     version = 3,
     read = {
@@ -46,7 +54,13 @@ var VirtualFile.scriptDependencies: ScriptDependencies? by cachedFileAttribute(
     }
 )
 
-var VirtualFile.scriptCompilationConfiguration: ScriptCompilationConfiguration? by cachedFileAttribute(
+var KtFile.scriptCompilationConfiguration: ScriptCompilationConfiguration?
+    get() = this.getScriptOriginalFile()?.virtualFile?.scriptCompilationConfiguration
+    set(value) {
+        this.getScriptOriginalFile()?.virtualFile?.scriptCompilationConfiguration = value
+    }
+
+private var VirtualFile.scriptCompilationConfiguration: ScriptCompilationConfiguration? by cachedFileAttribute(
     name = "kotlin-script-compilation-configuration",
     version = 1,
     read = {
