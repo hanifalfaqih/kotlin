@@ -23,16 +23,13 @@ inline fun <T> runReadAction(crossinline runnable: () -> T): T {
 }
 
 fun PsiFile.findScriptDefinition(): ScriptDefinition? {
-    // Do not use psiFile.script, see comments in findScriptDefinition
-    if (this !is KtFile/* || this.script == null*/) return null
     val ktFile = getScriptOriginalFile() ?: return null
-
-    // TODO: do not search for script definition for .kt files
+    if (runReadAction { ktFile.script == null }) return null
 
     return findScriptDefinitionByFilePath(project, File(ktFile.virtualFilePath))
 }
 
-fun KtFile.getScriptOriginalFile(): KtFile? {
+fun PsiFile.getScriptOriginalFile(): KtFile? {
     val virtualFile = this.virtualFile
     if (virtualFile == null) {
         if (this != originalFile) {
@@ -41,9 +38,7 @@ fun KtFile.getScriptOriginalFile(): KtFile? {
         return null
     }
 
-    if (virtualFile.isNonScript()) return null
-
-    return this
+    return this as? KtFile
 }
 
 @Deprecated("Use PsiFile.findScriptDefinition() instead")
