@@ -44,6 +44,7 @@ import org.jetbrains.java.debugger.breakpoints.properties.JavaBreakpointProperti
 import org.jetbrains.java.debugger.breakpoints.properties.JavaLineBreakpointProperties
 import org.jetbrains.kotlin.idea.debugger.breakpoints.*
 import org.jetbrains.kotlin.idea.debugger.stepping.*
+import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinSmartStepIntoHandler
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.psi.psiUtil.createSmartPointer
@@ -229,7 +230,8 @@ abstract class KotlinDebuggerTestBase : KotlinDebuggerTestCase() {
         return runReadAction {
             val position = debuggerContext.sourcePosition
 
-            val stepTargets = KotlinSmartStepIntoHandler().findSmartStepTargets(position)
+            val stepTargets = KotlinSmartStepIntoHandler()
+                .findSmartStepTargets(position)
             stepTargets.filterIsInstance<SmartStepTarget>().mapNotNull {
                 stepTarget ->
                 when (stepTarget) {
