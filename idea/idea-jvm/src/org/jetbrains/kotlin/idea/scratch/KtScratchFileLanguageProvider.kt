@@ -16,22 +16,20 @@
 
 package org.jetbrains.kotlin.idea.scratch
 
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.idea.scratch.compile.KtCompilingExecutor
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.RightPanelOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.repl.KtScratchReplExecutor
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 
 class KtScratchFileLanguageProvider : ScratchFileLanguageProvider() {
     override fun createFile(
         project: Project,
-        editor: TextEditor,
-        previewEditor: Editor
+        editor: ScratchTextEditorWithPreview
     ): ScratchFile? {
-        return KtScratchFile(project, editor, previewEditor)
+        return KtScratchFile(project, editor)
     }
 
     override fun createReplExecutor(file: ScratchFile) = KtScratchReplExecutor(file)

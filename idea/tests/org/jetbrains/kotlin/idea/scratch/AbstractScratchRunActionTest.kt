@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.idea.scratch.actions.ScratchCompilationSupport
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchFileRenderer
 import org.jetbrains.kotlin.idea.scratch.output.getInlays
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
-import org.jetbrains.kotlin.idea.scratch.ui.pairedPreviewEditor
 import org.jetbrains.kotlin.idea.test.KotlinLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
 import org.jetbrains.kotlin.idea.test.PluginTestCaseBase
@@ -59,7 +58,11 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
         launchScratch()
         waitUntilScratchFinishes()
 
-        val previewEditor = myFixture.editor.pairedPreviewEditor ?: error("No preview editor found")
+        val (_, scratchPanel) = getEditorWithScratchPanel(myManager, myFixture.file.virtualFile)
+            ?: error("Couldn't find scratch panel")
+
+        val previewEditor = scratchPanel.scratchFile.previewEditor
+
         val previewTextWithFoldings = CodeInsightTestFixtureImpl.getFoldingData(previewEditor, /*withCollapseData=*/false)
 
         KotlinTestUtils.assertEqualsToFile(expectedPreviewOutput, previewTextWithFoldings)

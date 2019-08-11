@@ -17,20 +17,19 @@
 package org.jetbrains.kotlin.idea.scratch
 
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 import org.jetbrains.kotlin.idea.scratch.ui.scratchFileOptions
 
 abstract class ScratchFile(
     val project: Project,
-    val editor: TextEditor,
-    val previewEditor: Editor
+    val editor: ScratchTextEditorWithPreview
 ) {
+    val previewEditor = editor.preview
     var replScratchExecutor: SequentialScratchExecutor? = null
     var compilingScratchExecutor: ScratchExecutor? = null
 

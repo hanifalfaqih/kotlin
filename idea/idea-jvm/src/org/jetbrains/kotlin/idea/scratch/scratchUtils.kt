@@ -17,7 +17,9 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.idea.actions.KOTLIN_WORKSHEET_EXTENSION
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchPanelListener
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
+import org.jetbrains.kotlin.idea.scratch.ui.pairedEditor
 import org.jetbrains.kotlin.idea.syncPublisherWithDisposeCheck
 import org.jetbrains.kotlin.psi.UserDataProperty
 
@@ -40,7 +42,7 @@ fun getEditorWithoutScratchPanel(fileManager: FileEditorManager, virtualFile: Vi
 
 fun getEditorWithScratchPanel(fileManager: FileEditorManager, virtualFile: VirtualFile): Pair<TextEditor, ScratchTopPanel>? {
     val editor = fileManager.getSelectedEditor(virtualFile) as? TextEditor ?: return null
-    val scratchTopPanel = editor.scratchTopPanel ?: return null
+    val scratchTopPanel = editor.getScratchPanel() ?: return null
     return editor to scratchTopPanel
 }
 
@@ -56,7 +58,7 @@ fun getScratchPanelFromSelectedEditor(project: Project): ScratchTopPanel? {
 }
 
 fun TextEditor.getScratchPanel(): ScratchTopPanel? {
-    return scratchTopPanel
+    return if (this is ScratchTextEditorWithPreview) topPanel else pairedEditor?.topPanel
 }
 
 fun TextEditor.addScratchPanel(panel: ScratchTopPanel) {

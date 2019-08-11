@@ -18,22 +18,20 @@ package org.jetbrains.kotlin.idea.scratch
 
 import com.intellij.lang.Language
 import com.intellij.lang.LanguageExtension
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.idea.scratch.actions.ScratchCompilationSupport
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 
 abstract class ScratchFileLanguageProvider {
     fun newScratchFile(
         project: Project,
-        editor: TextEditor,
-        previewEditor: Editor
+        editor: ScratchTextEditorWithPreview
     ): ScratchFile? {
-        val scratchFile = createFile(project, editor, previewEditor) ?: return null
+        val scratchFile = createFile(project, editor) ?: return null
 
         scratchFile.replScratchExecutor = createReplExecutor(scratchFile)
         scratchFile.compilingScratchExecutor = createCompilingExecutor(scratchFile)
@@ -59,8 +57,7 @@ abstract class ScratchFileLanguageProvider {
 
     protected abstract fun createFile(
         project: Project,
-        editor: TextEditor,
-        previewEditor: Editor
+        editor: ScratchTextEditorWithPreview
     ): ScratchFile?
     protected abstract fun createReplExecutor(file: ScratchFile): SequentialScratchExecutor?
     protected abstract fun createCompilingExecutor(file: ScratchFile): ScratchExecutor?

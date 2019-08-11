@@ -23,8 +23,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.CheckboxAction
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleType
@@ -50,7 +48,8 @@ import javax.swing.JComponent
 
 interface ScratchTopPanel : Disposable {
     val scratchFile: ScratchFile
-    val component: JComponent
+    val component: JComponent get() = toolbar.component
+    val toolbar: ActionToolbar
     fun getModule(): Module?
     fun setModule(module: Module)
     fun hideModuleSelector()
@@ -75,11 +74,10 @@ interface ScratchTopPanel : Disposable {
         fun createPanel(
             project: Project,
             virtualFile: VirtualFile,
-            editor: TextEditor,
-            previewEditor: Editor
-        ) {
-            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
-            val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor, previewEditor) ?: return
+            editor: ScratchTextEditorWithPreview
+        ): ScratchTopPanel? {
+            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return null
+            val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor) ?: return null
             val panel = ActionsScratchTopPanel(scratchFile)
 
             val toolbarHandler = createUpdateToolbarHandler(panel)
@@ -98,7 +96,7 @@ interface ScratchTopPanel : Disposable {
             scratchFile.replScratchExecutor?.addOutputHandler(toolbarHandler)
             scratchFile.compilingScratchExecutor?.addOutputHandler(toolbarHandler)
 
-            editor.addScratchPanel(panel)
+            return panel
         }
 
         private fun createUpdateToolbarHandler(panel: ScratchTopPanel) = object : ScratchOutputHandlerAdapter() {
@@ -179,7 +177,8 @@ private class ActionsScratchTopPanel(override val scratchFile: ScratchFile) : Sc
         }
     }
 
-    override val component: JComponent = actionsToolbar.component
+    override val toolbar: ActionToolbar
+        get() = actionsToolbar
 
     override fun getModule(): Module? = moduleChooserAction.selectedModule
 
