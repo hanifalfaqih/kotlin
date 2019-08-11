@@ -23,7 +23,7 @@ import kotlin.math.max
 
 object RightPanelOutputHandler : ScratchOutputHandler {
     override fun onStart(file: ScratchFile) {
-        getToolwindowHandler().onStart(file)
+//        getToolwindowHandler().onStart(file)
     }
 
     override fun handle(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
@@ -31,17 +31,17 @@ object RightPanelOutputHandler : ScratchOutputHandler {
 
         printToWindow(file, expression, output)
 
-        if (output.type == ScratchOutputType.ERROR) {
-            getToolwindowHandler().handle(file, expression, output)
-        }
+//        if (output.type == ScratchOutputType.ERROR) {
+//            getToolwindowHandler().handle(file, expression, output)
+//        }
     }
 
     override fun error(file: ScratchFile, message: String) {
-        getToolwindowHandler().error(file, message)
+//        getToolwindowHandler().error(file, message)
     }
 
     override fun onFinish(file: ScratchFile) {
-        getToolwindowHandler().onFinish(file)
+//        getToolwindowHandler().onFinish(file)
     }
 
     override fun clear(file: ScratchFile) {
