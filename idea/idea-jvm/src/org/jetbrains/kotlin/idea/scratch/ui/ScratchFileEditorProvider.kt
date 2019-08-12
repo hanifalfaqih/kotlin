@@ -37,7 +37,7 @@ class ScratchTextEditorWithPreview(
         private set
 
     init {
-        sourceEditor.pairedEditor = this
+        sourceEditor.parentEditorWithPreview = this
         configureTwoSideSyncScrollSupport(sourceEditor.editor, preview)
     }
 
@@ -63,7 +63,7 @@ class ScratchTextEditorWithPreview(
     }
 }
 
-var TextEditor.pairedEditor: ScratchTextEditorWithPreview? by UserDataProperty<TextEditor, ScratchTextEditorWithPreview>(Key.create("paired.editor"))
+var TextEditor.parentEditorWithPreview: ScratchTextEditorWithPreview? by UserDataProperty(Key.create("paired.editor"))
 
 class ScratchFileEditorProvider : FileEditorProvider, DumbAware {
     override fun getEditorTypeId(): String = KTS_SCRATCH_EDITOR_PROVIDER

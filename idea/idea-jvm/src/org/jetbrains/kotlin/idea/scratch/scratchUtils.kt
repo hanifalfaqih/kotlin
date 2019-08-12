@@ -16,7 +16,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.idea.actions.KOTLIN_WORKSHEET_EXTENSION
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
-import org.jetbrains.kotlin.idea.scratch.ui.pairedEditor
+import org.jetbrains.kotlin.idea.scratch.ui.parentEditorWithPreview
 
 internal val LOG = Logger.getInstance("#org.jetbrains.kotlin.idea.scratch")
 internal fun Logger.printDebugMessage(str: String) {
@@ -41,5 +41,5 @@ fun getScratchPanelFromSelectedEditor(project: Project): ScratchTopPanel? {
 }
 
 fun TextEditor.getScratchPanel(): ScratchTopPanel? {
-    return if (this is ScratchTextEditorWithPreview) topPanel else pairedEditor?.topPanel
+    return if (this is ScratchTextEditorWithPreview) topPanel else parentEditorWithPreview?.topPanel
 }
