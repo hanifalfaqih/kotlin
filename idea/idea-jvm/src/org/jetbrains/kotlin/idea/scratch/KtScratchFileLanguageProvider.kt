@@ -25,10 +25,7 @@ import org.jetbrains.kotlin.idea.scratch.repl.KtScratchReplExecutor
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
 
 class KtScratchFileLanguageProvider : ScratchFileLanguageProvider() {
-    override fun createFile(
-        project: Project,
-        editor: ScratchTextEditorWithPreview
-    ): ScratchFile? {
+    override fun createFile(project: Project, editor: ScratchTextEditorWithPreview): ScratchFile? {
         return KtScratchFile(project, editor)
     }
 
