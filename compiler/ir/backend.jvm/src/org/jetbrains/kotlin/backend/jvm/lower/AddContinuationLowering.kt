@@ -467,13 +467,13 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                 return res
             }
 
-            private fun getContinuationFromCaller(): IrGetValue {
+            private fun getContinuationFromCaller(): IrGetValue? {
                 val caller = functionStack.peek()!!
                 val continuationParameter =
                     if (caller.isSuspend) caller.valueParameters.last().symbol
                     else if (caller.name.asString() == INVOKE_SUSPEND_METHOD_NAME && caller.parent in context.suspendLambdaToOriginalFunctionMap)
                         caller.dispatchReceiverParameter!!.symbol
-                    else error("suspend call outside suspend context: ${ir2string(caller)}")
+                    else return null
                 return IrGetValueImpl(
                     UNDEFINED_OFFSET,
                     UNDEFINED_OFFSET,
@@ -490,7 +490,12 @@ private class AddContinuationLowering(private val context: JvmBackendContext) : 
                     for (i in 0 until expression.valueArgumentsCount) {
                         putValueArgument(i, expression.getValueArgument(i))
                     }
-                    putValueArgument(expression.valueArgumentsCount, getContinuationFromCaller())
+                    val continuation = getContinuationFromCaller() ?: error(
+                        "Cannot get continuation from context for a suspend call.\n" +
+                                "Caller: ${ir2string(functionStack.peek())}\n" +
+                                "Callee: ${ir2string(expression)}"
+                    )
+                    putValueArgument(expression.valueArgumentsCount, continuation)
                 }
                 return super.visitCall(res)
             }
