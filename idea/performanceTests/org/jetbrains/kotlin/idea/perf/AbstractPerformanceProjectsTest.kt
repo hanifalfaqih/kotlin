@@ -122,6 +122,7 @@ abstract class AbstractPerformanceProjectsTest : UsefulTestCase() {
     }
 
     override fun tearDown() {
+        commitAllDocuments()
         RunAll(
             ThrowableRunnable { super.tearDown() },
             ThrowableRunnable {
