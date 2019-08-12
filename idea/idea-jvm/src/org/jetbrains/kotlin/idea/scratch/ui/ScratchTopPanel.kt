@@ -25,12 +25,15 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.messages.Topic
 import org.jetbrains.annotations.TestOnly
+import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
+import org.jetbrains.kotlin.idea.caches.project.testSourceInfo
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
 import org.jetbrains.kotlin.idea.scratch.actions.ClearScratchAction
@@ -103,20 +106,19 @@ interface ScratchTopPanel : Disposable {
 }
 
 private class ActionsScratchTopPanel(override val scratchFile: ScratchFile) : ScratchTopPanel {
-    override fun dispose() {
-        scratchFile.replScratchExecutor?.stop()
-        scratchFile.compilingScratchExecutor?.stop()
-    }
-
-    private val moduleChooserAction: ModulesComboBoxAction = ModulesComboBoxAction("Use classpath of module")
+    private val moduleChooserAction: ModulesComboBoxAction
 
     private val isReplCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Use REPL")
     private val isMakeBeforeRunCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Make before run")
     private val isInteractiveCheckbox: ListenableCheckboxAction = ListenableCheckboxAction("Interactive mode")
-
     private val actionsToolbar: ActionToolbar
 
     init {
+        val modulesWithSources = ModuleManager.getInstance(scratchFile.project).modules.filter {
+            it.productionSourceInfo() != null || it.testSourceInfo() != null
+        }
+
+        moduleChooserAction = ModulesComboBoxAction("Use classpath of module", modulesWithSources)
         moduleChooserAction.addOnChangeListener { updateToolbar() }
 
         isMakeBeforeRunCheckbox.addOnChangeListener {
@@ -165,6 +167,11 @@ private class ActionsScratchTopPanel(override val scratchFile: ScratchFile) : Sc
             isMakeBeforeRunCheckbox.isSelected = it.isMakeBeforeRun
             isInteractiveCheckbox.isSelected = it.isInteractiveMode
         }
+    }
+
+    override fun dispose() {
+        scratchFile.replScratchExecutor?.stop()
+        scratchFile.compilingScratchExecutor?.stop()
     }
 
     override val toolbar: ActionToolbar

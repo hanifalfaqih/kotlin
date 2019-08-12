@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
 import org.jetbrains.kotlin.idea.caches.project.testSourceInfo
 import javax.swing.JComponent
 
-class ModulesComboBoxAction(val label: String) : LabeledComboBoxAction(label) {
+class ModulesComboBoxAction(label: String, private val modules: List<Module>) : LabeledComboBoxAction(label) {
     private val listeners: MutableList<() -> Unit> = mutableListOf()
 
     var selectedModule: Module? = null
@@ -29,17 +29,10 @@ class ModulesComboBoxAction(val label: String) : LabeledComboBoxAction(label) {
         throw UnsupportedOperationException("Should not be called!")
 
     override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
-        val project = dataContext.getData(CommonDataKeys.PROJECT)
+        val actionGroup = DefaultActionGroup()
 
-        val actionGroup = DefaultActionGroup(ModuleIsNotSelectedAction(ConfigurationModuleSelector.NO_MODULE_TEXT))
-
-        if (project != null) {
-            val modules = ModuleManager.getInstance(project).modules.filter {
-                it.productionSourceInfo() != null || it.testSourceInfo() != null
-            }
-
-            actionGroup.addAll(modules.map { SelectModuleAction(it) })
-        }
+        actionGroup.add(ModuleIsNotSelectedAction(ConfigurationModuleSelector.NO_MODULE_TEXT))
+        actionGroup.addAll(modules.map { SelectModuleAction(it) })
 
         return actionGroup
     }
@@ -64,9 +57,7 @@ class ModulesComboBoxAction(val label: String) : LabeledComboBoxAction(label) {
         }
     }
 
-    private inner class SelectModuleAction(private val module: Module) : DumbAwareAction(module.name, null, ModuleType.get(
-        module
-    ).icon) {
+    private inner class SelectModuleAction(private val module: Module) : DumbAwareAction(module.name, null, ModuleType.get(module).icon) {
         override fun actionPerformed(e: AnActionEvent) {
             selectedModule = module
         }
