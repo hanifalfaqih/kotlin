@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.backend.jvm.ir
 
+import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -85,6 +86,9 @@ fun IrValueParameter.isInlineParameter() =
 
 val IrTypeOperatorCall.samConversionTarget: IrExpression
     get() {
+        require(operator == IrTypeOperator.SAM_CONVERSION) {
+            "Should only be called for SAM conversion operators: ${ir2string(this)}"
+        }
         var result = argument
 
         // In case the SAM interface's method is generic, there will be an additional IMPLICIT_CAST operator.
