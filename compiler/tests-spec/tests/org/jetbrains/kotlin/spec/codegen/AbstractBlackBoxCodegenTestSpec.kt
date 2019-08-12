@@ -44,7 +44,7 @@ abstract class AbstractBlackBoxCodegenTestSpec : AbstractBlackBoxCodegenTest() {
         }
     }
 
-    override fun doMultiFileTest(wholeFile: File, files: MutableList<TestFile>, javaFilesDir: File?) {
+    override fun doMultiFileTest(wholeFile: File, files: MutableList<TestFile>) {
         val (specTest, testLinkedType) = CommonParser.parseSpecTest(
             wholeFile.canonicalPath,
             mapOf("main.kt" to FileUtil.loadFile(wholeFile, true))
@@ -62,7 +62,7 @@ abstract class AbstractBlackBoxCodegenTestSpec : AbstractBlackBoxCodegenTest() {
 
         includeHelpers(wholeFile, files, specTest)
 
-        val runTest = { super.doMultiFileTest(wholeFile, files, javaFilesDir, specTest.unexpectedBehavior) }
+        val runTest = { super.doMultiFileTest(wholeFile, files, specTest.unexpectedBehavior) }
 
         if (specTest.exception == null) {
             runTest()

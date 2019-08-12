@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
- * that can be found in the license/LICENSE.txt file.
+ * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.codegen;
@@ -27,19 +27,14 @@ import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getBoxM
 import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getGeneratedClass;
 
 public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
-
-    private static final boolean IGNORE_EXPECTED_FAILURES =
-            Boolean.getBoolean("kotlin.suppress.expected.test.failures");
-
     protected void doMultiFileTest(
-        @NotNull File wholeFile,
-        @NotNull List<TestFile> files,
-        @Nullable File javaFilesDir,
-        boolean unexpectedBehaviour
+            @NotNull File wholeFile,
+            @NotNull List<TestFile> files,
+            boolean unexpectedBehaviour
     ) throws Exception {
-        boolean isIgnored = IGNORE_EXPECTED_FAILURES && InTextDirectivesUtils.isIgnoredTarget(getBackend(), wholeFile);
+        boolean isIgnored = InTextDirectivesUtils.isIgnoredTarget(getBackend(), wholeFile);
 
-        compile(files, javaFilesDir, !isIgnored);
+        compile(files, !isIgnored);
 
         try {
             blackBox(!isIgnored, unexpectedBehaviour);
@@ -63,10 +58,9 @@ public abstract class AbstractBlackBoxCodegenTest extends CodegenTestCase {
     @Override
     protected void doMultiFileTest(
         @NotNull File wholeFile,
-        @NotNull List<TestFile> files,
-        @Nullable File javaFilesDir
+        @NotNull List<TestFile> files
     ) throws Exception {
-        doMultiFileTest(wholeFile, files, javaFilesDir, false);
+        doMultiFileTest(wholeFile, files, false);
     }
 
     private void doBytecodeListingTest(@NotNull File wholeFile) throws Exception {
