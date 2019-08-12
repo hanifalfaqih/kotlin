@@ -18,37 +18,28 @@ package org.jetbrains.kotlin.idea.scratch.ui
 
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
-import com.intellij.execution.ui.ConfigurationModuleSelector
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.actionSystem.ex.CheckboxAction
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleManager
-import com.intellij.openapi.module.ModuleType
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vcs.changes.committed.LabeledComboBoxAction
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.messages.Topic
 import org.jetbrains.annotations.TestOnly
-import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
-import org.jetbrains.kotlin.idea.caches.project.testSourceInfo
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
 import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
 import org.jetbrains.kotlin.idea.scratch.actions.ClearScratchAction
 import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
 import org.jetbrains.kotlin.idea.scratch.actions.StopScratchAction
-import org.jetbrains.kotlin.idea.scratch.addScratchPanel
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
-import org.jetbrains.kotlin.idea.scratch.removeScratchPanel
-import javax.swing.JComponent
 
 interface ScratchTopPanel : Disposable {
     val scratchFile: ScratchFile
-    val component: JComponent get() = toolbar.component
     val toolbar: ActionToolbar
     fun getModule(): Module?
     fun setModule(module: Module)
@@ -115,7 +106,6 @@ private class ActionsScratchTopPanel(override val scratchFile: ScratchFile) : Sc
     override fun dispose() {
         scratchFile.replScratchExecutor?.stop()
         scratchFile.compilingScratchExecutor?.stop()
-        scratchFile.editor.removeScratchPanel()
     }
 
     private val moduleChooserAction: ModulesComboBoxAction = ModulesComboBoxAction("Use classpath of module")
@@ -237,87 +227,5 @@ interface ScratchPanelListener {
 
     companion object {
         val TOPIC = Topic.create("ScratchPanelListener", ScratchPanelListener::class.java)
-    }
-}
-
-private class ListenableCheckboxAction(val label: String) : CheckboxAction(label) {
-    private val listeners: MutableList<() -> Unit> = mutableListOf()
-    var isVisible: Boolean = true
-    var isSelected: Boolean = false
-        set(value) {
-            field = value
-            listeners.forEach { it() }
-        }
-
-    override fun isSelected(e: AnActionEvent): Boolean = isSelected
-
-    override fun setSelected(e: AnActionEvent, newState: Boolean) {
-        isSelected = newState
-    }
-
-    override fun update(e: AnActionEvent) {
-        super.update(e)
-        e.presentation.isVisible = isVisible
-    }
-
-    fun addOnChangeListener(listener: () -> Unit) {
-        listeners.add(listener)
-    }
-}
-
-private class ModulesComboBoxAction(val label: String) : LabeledComboBoxAction(label) {
-    private val listeners: MutableList<() -> Unit> = mutableListOf()
-
-    var selectedModule: Module? = null
-        set(value) {
-            field = value
-            listeners.forEach { it() }
-        }
-
-    var isVisible: Boolean = true
-
-    override fun createPopupActionGroup(button: JComponent?): DefaultActionGroup =
-        throw UnsupportedOperationException("Should not be called!")
-
-    override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
-        val project = dataContext.getData(CommonDataKeys.PROJECT)
-
-        val actionGroup = DefaultActionGroup(ModuleIsNotSelectedAction(ConfigurationModuleSelector.NO_MODULE_TEXT))
-
-        if (project != null) {
-            val modules = ModuleManager.getInstance(project).modules.filter {
-                it.productionSourceInfo() != null || it.testSourceInfo() != null
-            }
-
-            actionGroup.addAll(modules.map { SelectModuleAction(it) })
-        }
-
-        return actionGroup
-    }
-
-    override fun update(e: AnActionEvent) {
-        super.update(e)
-        e.presentation.apply {
-            icon = selectedModule?.let { ModuleType.get(it).icon }
-            text = selectedModule?.name ?: ConfigurationModuleSelector.NO_MODULE_TEXT
-        }
-
-        e.presentation.isVisible = isVisible
-    }
-
-    fun addOnChangeListener(listener: () -> Unit) {
-        listeners.add(listener)
-    }
-
-    private inner class ModuleIsNotSelectedAction(placeholder: String) : DumbAwareAction(placeholder) {
-        override fun actionPerformed(e: AnActionEvent) {
-            selectedModule = null
-        }
-    }
-
-    private inner class SelectModuleAction(private val module: Module) : DumbAwareAction(module.name, null, ModuleType.get(module).icon) {
-        override fun actionPerformed(e: AnActionEvent) {
-            selectedModule = module
-        }
     }
 }
