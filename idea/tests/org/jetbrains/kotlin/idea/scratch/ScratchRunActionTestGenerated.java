@@ -282,7 +282,7 @@ public class ScratchRunActionTestGenerated extends AbstractScratchRunActionTest 
     @RunWith(JUnit3RunnerWithInners.class)
     public static class ScratchRightPanelOutput extends AbstractScratchRunActionTest {
         private void runTest(String testDataFilePath) throws Exception {
-            KotlinTestUtils.runTest(this::doRightPanelOutputTest, TargetBackend.ANY, testDataFilePath);
+            KotlinTestUtils.runTest(this::doScratchPreviewOutputReplTest, TargetBackend.ANY, testDataFilePath);
         }
 
         public void testAllFilesPresentInScratchRightPanelOutput() throws Exception {

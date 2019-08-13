@@ -46,42 +46,24 @@ import java.io.File
 
 abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
-    fun doRightPanelOutputTest(fileName: String) {
-        val sourceFile = File(testDataPath, fileName)
-        val expectedPreviewOutput = File(testDataPath, fileName.replace(".kts", ".preview"))
-        val fileText = sourceFile.readText().inlinePropertiesValues()
-
-        configureScratchByText(sourceFile.name, fileText)
-
-        if (!KotlinHighlightingUtil.shouldHighlight(myFixture.file)) error("Highlighting for scratch file is switched off")
-
-        launchScratch()
-        waitUntilScratchFinishes()
-
-        val (_, scratchPanel) = getEditorWithScratchPanel(myManager, myFixture.file.virtualFile)
-            ?: error("Couldn't find scratch panel")
-
-        val previewEditor = scratchPanel.scratchFile.previewEditor
-
-        val previewTextWithFoldings = CodeInsightTestFixtureImpl.getFoldingData(previewEditor, /*withCollapseData=*/false)
-
-        KotlinTestUtils.assertEqualsToFile(expectedPreviewOutput, previewTextWithFoldings)
+    fun doScratchPreviewOutputReplTest(fileName: String) {
+        doPreviewEditorOutputTest(fileName = fileName, isRepl = false)
     }
 
     fun doWorksheetReplTest(fileName: String) {
-        doTest(fileName = fileName, isRepl = true, isWorksheet = true)
+        doInlayOutputTest(fileName = fileName, isRepl = true, isWorksheet = true)
     }
 
     fun doScratchReplTest(fileName: String) {
-        doTest(fileName = fileName, isRepl = true, isWorksheet = false)
+        doInlayOutputTest(fileName = fileName, isRepl = true, isWorksheet = false)
     }
 
     fun doWorksheetCompilingTest(fileName: String) {
-        doTest(fileName = fileName, isRepl = false, isWorksheet = true)
+        doInlayOutputTest(fileName = fileName, isRepl = false, isWorksheet = true)
     }
 
     fun doScratchCompilingTest(fileName: String) {
-        doTest(fileName = fileName, isRepl = false, isWorksheet = false)
+        doInlayOutputTest(fileName = fileName, isRepl = false, isWorksheet = false)
     }
 
     fun doWorksheetMultiFileTest(dirName: String) {
@@ -120,18 +102,36 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
         PsiTestUtil.setCompilerOutputPath(myFixture.module, outputDir.path, false)
 
         val mainFileName = "$dirName/${getTestName(true)}.$mainFileExtension"
-        doTest(mainFileName, isRepl = false, isWorksheet = isWorksheet)
+        doInlayOutputTest(mainFileName, isRepl = false, isWorksheet = isWorksheet)
 
         launchAction(ClearScratchAction())
 
-        doTest(mainFileName, isRepl = true, isWorksheet = isWorksheet)
+        doInlayOutputTest(mainFileName, isRepl = true, isWorksheet = isWorksheet)
 
         ModuleRootModificationUtil.updateModel(myFixture.module) { model ->
             model.getModuleExtension(CompilerModuleExtension::class.java).inheritCompilerOutputPath(true)
         }
     }
 
-    fun doTest(fileName: String, isRepl: Boolean, isWorksheet: Boolean) {
+    fun doInlayOutputTest(fileName: String, isRepl: Boolean, isWorksheet: Boolean) {
+        configureAndLaunchScratch(fileName = fileName, isRepl = isRepl, isWorksheet = isWorksheet)
+
+        val actualOutput = getFileTextWithInlays()
+
+        val expectedFile = getExpectedFile(fileName, isRepl)
+        KotlinTestUtils.assertEqualsToFile(expectedFile, actualOutput)
+    }
+
+    private fun doPreviewEditorOutputTest(fileName: String, isRepl: Boolean) {
+        configureAndLaunchScratch(fileName = fileName, isRepl = isRepl, isWorksheet = false)
+
+        val previewTextWithFoldings = getPreviewTextWithFoldings()
+
+        val expectedFile = getExpectedFile(fileName, isRepl)
+        KotlinTestUtils.assertEqualsToFile(expectedFile, previewTextWithFoldings)
+    }
+
+    private fun configureAndLaunchScratch(fileName: String, isRepl: Boolean, isWorksheet: Boolean) {
         val sourceFile = File(testDataPath, fileName)
         val fileText = sourceFile.readText().inlinePropertiesValues(isRepl)
 
@@ -145,16 +145,16 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
         launchScratch()
         waitUntilScratchFinishes()
+    }
 
-        val actualOutput = getFileTextWithInlays()
-
+    private fun getExpectedFile(fileName: String, isRepl: Boolean): File {
         val expectedFileName = if (isRepl) {
             fileName.replace(".kts", ".repl.after")
         } else {
             fileName.replace(".kts", ".comp.after")
         }
-        val expectedFile = File(testDataPath, expectedFileName)
-        KotlinTestUtils.assertEqualsToFile(expectedFile, actualOutput)
+
+        return File(testDataPath, expectedFileName)
     }
 
     protected fun String.inlinePropertiesValues(
@@ -179,6 +179,14 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
                 }
         }
         return actualOutput.toString().trim()
+    }
+
+    private fun getPreviewTextWithFoldings(): String {
+        val (_, scratchPanel) = getEditorWithScratchPanel(myManager, myFixture.file.virtualFile)
+            ?: error("Couldn't find scratch panel")
+
+        val previewEditor = scratchPanel.scratchFile.previewEditor
+        return CodeInsightTestFixtureImpl.getFoldingData(previewEditor, /*withCollapseData=*/false)
     }
 
     protected fun getInlays(start: Int = 0, end: Int = myFixture.file.textLength): List<InlayScratchFileRenderer> {
@@ -272,7 +280,6 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
     }
 
     override fun getTestDataPath() = KotlinTestUtils.getHomeDirectory()
-
 
     override fun getProjectDescriptor(): com.intellij.testFramework.LightProjectDescriptor {
         val testName = getTestName(false)
