@@ -44,6 +44,8 @@ import org.jetbrains.java.debugger.breakpoints.properties.JavaBreakpointProperti
 import org.jetbrains.java.debugger.breakpoints.properties.JavaLineBreakpointProperties
 import org.jetbrains.kotlin.idea.debugger.breakpoints.*
 import org.jetbrains.kotlin.idea.debugger.stepping.*
+import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinLambdaSmartStepTarget
+import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinMethodSmartStepTarget
 import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinSmartStepIntoHandler
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
