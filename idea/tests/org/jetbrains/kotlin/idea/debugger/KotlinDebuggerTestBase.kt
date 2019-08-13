@@ -49,6 +49,7 @@ import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinMethodSma
 import org.jetbrains.kotlin.idea.debugger.stepping.smartStepInto.KotlinSmartStepIntoHandler
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.psiUtil.createSmartPointer
 import org.jetbrains.kotlin.psi.psiUtil.getElementTextWithContext
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
@@ -274,10 +275,16 @@ abstract class KotlinDebuggerTestBase : KotlinDebuggerTestCase() {
 
         val libraryEntry = LibraryUtil.findLibraryEntry(virtualFile, project)
         if (libraryEntry != null && (libraryEntry is JdkOrderEntry || libraryEntry.presentableName == KOTLIN_LIBRARY_NAME)) {
-            return FileUtil.getNameWithoutExtension(virtualFile.name) + ".!EXT!"
+            val suffix = if (sourcePosition.isInCompiledFile()) "COMPILED" else "EXT"
+            return FileUtil.getNameWithoutExtension(virtualFile.name) + ".!$suffix!"
         }
 
         return virtualFile.name + ":" + (sourcePosition.line + 1)
+    }
+
+    private fun SourcePosition.isInCompiledFile(): Boolean {
+        val ktFile = file as? KtFile ?: return false
+        return ktFile.isCompiled
     }
 
     protected fun finish() {

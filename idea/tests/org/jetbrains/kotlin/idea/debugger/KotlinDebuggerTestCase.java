@@ -289,7 +289,11 @@ public abstract class KotlinDebuggerTestCase extends DescriptorTestCase {
         ApplicationManager.getApplication().runWriteAction(() -> {
             ModifiableRootModel model = ModuleRootManager.getInstance(myModule).getModifiableModel();
             configureLibrary(model, CUSTOM_LIBRARY_NAME, CUSTOM_LIBRARY_JAR, CUSTOM_LIBRARY_SOURCES);
-            configureLibrary(model, KOTLIN_LIBRARY_NAME, ForTestCompileRuntime.runtimeJarForTests(), new File("libraries/stdlib/src"));
+            configureLibrary(
+                    model, KOTLIN_LIBRARY_NAME,
+                    ForTestCompileRuntime.runtimeJarForTests(),
+                    ForTestCompileRuntime.runtimeSourcesJarForTests()
+            );
             model.commit();
         });
 
