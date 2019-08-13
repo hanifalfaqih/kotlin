@@ -19,22 +19,22 @@ package org.jetbrains.kotlin.idea.scratch
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.idea.scratch.compile.KtCompilingExecutor
 import org.jetbrains.kotlin.idea.scratch.output.InlayScratchOutputHandler
-import org.jetbrains.kotlin.idea.scratch.output.RightPanelOutputHandler
+import org.jetbrains.kotlin.idea.scratch.output.LayoutDependentOutputHandler
+import org.jetbrains.kotlin.idea.scratch.output.PreviewEditorScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.repl.KtScratchReplExecutor
-import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
 
 class KtScratchFileLanguageProvider : ScratchFileLanguageProvider() {
-    override fun createFile(project: Project, editor: ScratchTextEditorWithPreview): ScratchFile? {
+    override fun createFile(project: Project, editor: KtsScratchTextEditorWithPreview): ScratchFile? {
         return KtScratchFile(project, editor)
     }
 
     override fun createReplExecutor(file: ScratchFile) = KtScratchReplExecutor(file)
     override fun createCompilingExecutor(file: ScratchFile) = KtCompilingExecutor(file)
 
-    override fun getOutputHandler(): ScratchOutputHandler =
-        ScratchExecutor.CompositeOutputHandler().apply {
-            add(RightPanelOutputHandler)
-            add(InlayScratchOutputHandler)
-        }
+    override fun getOutputHandler(): ScratchOutputHandler = LayoutDependentOutputHandler(
+        noPreviewHandler = InlayScratchOutputHandler,
+        withPreviewHandler = PreviewEditorScratchOutputHandler
+    )
 }

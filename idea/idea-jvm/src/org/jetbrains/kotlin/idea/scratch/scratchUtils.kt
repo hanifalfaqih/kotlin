@@ -14,7 +14,7 @@ import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.kotlin.idea.actions.KOTLIN_WORKSHEET_EXTENSION
-import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
 import org.jetbrains.kotlin.idea.scratch.ui.ScratchTopPanel
 import org.jetbrains.kotlin.idea.scratch.ui.parentEditorWithPreview
 
@@ -41,5 +41,10 @@ fun getScratchPanelFromSelectedEditor(project: Project): ScratchTopPanel? {
 }
 
 fun TextEditor.getScratchPanel(): ScratchTopPanel? {
-    return if (this is ScratchTextEditorWithPreview) topPanel else parentEditorWithPreview?.topPanel
+    return if (this is KtsScratchTextEditorWithPreview) topPanel else parentEditorWithPreview?.topPanel
+}
+
+fun clearScratchFileOutputHandler(scratchFile: ScratchFile) {
+    val psiFile = scratchFile.getPsiFile() ?: return
+    ScratchFileLanguageProvider.get(psiFile.language)?.getOutputHandler()?.clear(scratchFile)
 }

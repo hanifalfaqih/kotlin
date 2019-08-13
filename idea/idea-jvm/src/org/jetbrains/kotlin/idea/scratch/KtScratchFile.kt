@@ -25,7 +25,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.diagnostics.Severity
 import org.jetbrains.kotlin.idea.caches.resolve.analyzeWithContent
 import org.jetbrains.kotlin.idea.core.util.CodeInsightUtils
-import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtImportDirective
@@ -33,7 +33,7 @@ import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.resolve.AnalyzingUtils
 
-class KtScratchFile(project: Project, editor: ScratchTextEditorWithPreview) : ScratchFile(project, editor) {
+class KtScratchFile(project: Project, editor: KtsScratchTextEditorWithPreview) : ScratchFile(project, editor) {
     override fun getExpressions(psiFile: PsiFile): List<ScratchExpression> {
         // todo multiple expressions at one line
         val doc = PsiDocumentManager.getInstance(psiFile.project).getLastCommittedDocument(psiFile) ?: return emptyList()

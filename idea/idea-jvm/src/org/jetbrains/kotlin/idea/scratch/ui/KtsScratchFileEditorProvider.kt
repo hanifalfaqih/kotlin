@@ -8,6 +8,8 @@ package org.jetbrains.kotlin.idea.scratch.ui
 import com.intellij.diff.tools.util.BaseSyncScrollable
 import com.intellij.diff.tools.util.SyncScrollSupport
 import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.VisibleAreaListener
@@ -19,20 +21,18 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiManager
-import org.jetbrains.kotlin.idea.scratch.ScratchFileAutoRunner
-import org.jetbrains.kotlin.idea.scratch.ScratchFileLanguageProvider
-import org.jetbrains.kotlin.idea.scratch.isKotlinScratch
-import org.jetbrains.kotlin.idea.scratch.isKotlinWorksheet
+import org.jetbrains.kotlin.idea.scratch.*
 import org.jetbrains.kotlin.idea.scratch.output.previewOutputBlocksManager
 import org.jetbrains.kotlin.idea.syncPublisherWithDisposeCheck
 import org.jetbrains.kotlin.psi.UserDataProperty
 
 private const val KTS_SCRATCH_EDITOR_PROVIDER: String = "KtsScratchFileEditorProvider"
 
-class ScratchTextEditorWithPreview(
+class KtsScratchTextEditorWithPreview(
     private val sourceEditor: TextEditor,
     val preview: Editor
 ) : TextEditorWithPreview(sourceEditor, TextEditorProvider.getInstance().getTextEditor(preview)), TextEditor {
+
     lateinit var topPanel: ScratchTopPanel
         private set
 
@@ -58,14 +58,59 @@ class ScratchTextEditorWithPreview(
     override fun getEditor(): Editor = sourceEditor.editor
 
     override fun getFile(): VirtualFile? = sourceEditor.file
+
     fun setTopPanel(scratchTopPanel: ScratchTopPanel) {
         topPanel = scratchTopPanel
     }
+
+    override fun getShowEditorAction(): ToggleAction {
+        return TrackingToggleAction(super.getShowEditorAction()) { previous ->
+            if (previous == Layout.SHOW_EDITOR_AND_PREVIEW || previous == Layout.SHOW_PREVIEW) {
+                clearScratchFileOutputHandler(topPanel.scratchFile)
+            }
+        }
+    }
+
+    override fun getShowEditorAndPreviewAction(): ToggleAction {
+        return TrackingToggleAction(super.getShowEditorAndPreviewAction()) { previous ->
+            if (previous == Layout.SHOW_EDITOR) {
+                clearScratchFileOutputHandler(topPanel.scratchFile)
+            }
+        }
+    }
+
+    override fun getShowPreviewAction(): ToggleAction {
+        return TrackingToggleAction(super.getShowPreviewAction()) { previous ->
+            if (previous == Layout.SHOW_EDITOR) {
+                clearScratchFileOutputHandler(topPanel.scratchFile)
+            }
+        }
+    }
+
+    /**
+     * This class is needed to track when [TextEditorWithPreview] changes its layout state.
+     */
+    private inner class TrackingToggleAction(
+        private val action: ToggleAction,
+        private val onSetSelected: (previous: Layout) -> Unit
+    ) : ToggleAction(
+        action.templatePresentation.text,
+        action.templatePresentation.description,
+        action.templatePresentation.icon
+    ) {
+        override fun isSelected(e: AnActionEvent): Boolean = action.isSelected(e)
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            val previous = layout
+            action.setSelected(e, state)
+            onSetSelected(previous)
+        }
+    }
 }
 
-var TextEditor.parentEditorWithPreview: ScratchTextEditorWithPreview? by UserDataProperty(Key.create("paired.editor"))
+var TextEditor.parentEditorWithPreview: KtsScratchTextEditorWithPreview? by UserDataProperty(Key.create("paired.editor"))
 
-class ScratchFileEditorProvider : FileEditorProvider, DumbAware {
+class KtsScratchFileEditorProvider : FileEditorProvider, DumbAware {
     override fun getEditorTypeId(): String = KTS_SCRATCH_EDITOR_PROVIDER
 
     override fun accept(project: Project, file: VirtualFile): Boolean {
@@ -80,7 +125,7 @@ class ScratchFileEditorProvider : FileEditorProvider, DumbAware {
 
         ScratchFileAutoRunner.addListener(project, editor)
 
-        val textEditor = ScratchTextEditorWithPreview(
+        val textEditor = KtsScratchTextEditorWithPreview(
             editor,
             EditorFactory.getInstance().let { factory -> factory.createViewer(factory.createDocument("")) }
         )

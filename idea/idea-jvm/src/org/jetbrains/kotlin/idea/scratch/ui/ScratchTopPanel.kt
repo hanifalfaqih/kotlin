@@ -68,7 +68,7 @@ interface ScratchTopPanel : Disposable {
         fun createPanel(
             project: Project,
             virtualFile: VirtualFile,
-            editor: ScratchTextEditorWithPreview
+            editor: KtsScratchTextEditorWithPreview
         ): ScratchTopPanel? {
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return null
             val scratchFile = ScratchFileLanguageProvider.get(psiFile.language)?.newScratchFile(project, editor) ?: return null

@@ -22,10 +22,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import org.jetbrains.kotlin.idea.scratch.ui.ScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
 import org.jetbrains.kotlin.idea.scratch.ui.scratchFileOptions
 
-abstract class ScratchFile(val project: Project, val editor: ScratchTextEditorWithPreview) {
+abstract class ScratchFile(val project: Project, val editor: KtsScratchTextEditorWithPreview) {
     val previewEditor = editor.preview
     var replScratchExecutor: SequentialScratchExecutor? = null
     var compilingScratchExecutor: ScratchExecutor? = null

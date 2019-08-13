@@ -21,19 +21,13 @@ import org.jetbrains.kotlin.psi.UserDataProperty
 import java.util.*
 import kotlin.math.max
 
-object RightPanelOutputHandler : ScratchOutputHandler {
+object PreviewEditorScratchOutputHandler : ScratchOutputHandler {
     override fun onStart(file: ScratchFile) {
 //        getToolwindowHandler().onStart(file)
     }
 
     override fun handle(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
-        if (output.text.isBlank()) return
-
-        printToWindow(file, expression, output)
-
-//        if (output.type == ScratchOutputType.ERROR) {
-//            getToolwindowHandler().handle(file, expression, output)
-//        }
+        printToPreviewEditor(file, expression, output)
     }
 
     override fun error(file: ScratchFile, message: String) {
@@ -57,7 +51,7 @@ object RightPanelOutputHandler : ScratchOutputHandler {
         })
     }
 
-    private fun printToWindow(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
+    private fun printToPreviewEditor(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
         TransactionGuard.submitTransaction(file.project, Runnable {
             val outputManager = file.previewEditor.previewOutputBlocksManager ?: run {
                 val previewOutputManager = PreviewOutputBlocksManager(file.previewEditor.document, file.previewEditor.foldingModel)
