@@ -22,6 +22,10 @@ abstract class Your {
     @Synchronized open fun baz(): String {
         return "xyz"
     }
+
+    var v: String
+        @Synchronized get() = ""
+        @Synchronized set(<!UNUSED_PARAMETER!>value<!>) {}
 }
 
 @Synchronized fun gav() = 1

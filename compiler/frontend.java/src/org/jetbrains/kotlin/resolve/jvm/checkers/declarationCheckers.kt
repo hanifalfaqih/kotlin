@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.resolve.calls.components.isActualParameterWithCorres
 import org.jetbrains.kotlin.resolve.checkers.DeclarationChecker
 import org.jetbrains.kotlin.resolve.checkers.DeclarationCheckerContext
 import org.jetbrains.kotlin.resolve.descriptorUtil.isAnnotationConstructor
+import org.jetbrains.kotlin.resolve.descriptorUtil.propertyIfAccessor
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
 import org.jetbrains.kotlin.resolve.jvm.annotations.VOLATILE_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.findJvmOverloadsAnnotation
@@ -184,13 +185,18 @@ class SynchronizedAnnotationChecker : DeclarationChecker {
         val synchronizedAnnotation = descriptor.findSynchronizedAnnotation()
         if (synchronizedAnnotation != null && descriptor is FunctionDescriptor) {
             val annotationEntry = DescriptorToSourceUtils.getSourceFromAnnotation(synchronizedAnnotation) ?: return
-            if (DescriptorUtils.isInterface(descriptor.containingDeclaration)) {
+            if (isInInterface(descriptor)) {
                 context.trace.report(ErrorsJvm.SYNCHRONIZED_IN_INTERFACE.on(annotationEntry))
             } else if (descriptor.modality == Modality.ABSTRACT) {
                 context.trace.report(ErrorsJvm.SYNCHRONIZED_ON_ABSTRACT.on(annotationEntry))
             }
         }
     }
+
+    private fun isInInterface(descriptor: FunctionDescriptor): Boolean =
+        DescriptorUtils.isInterface(descriptor.containingDeclaration) ||
+                (descriptor.propertyIfAccessor.isInsideCompanionObjectOfInterface() &&
+                        (descriptor.hasJvmStaticAnnotation() || descriptor.propertyIfAccessor.hasJvmStaticAnnotation()))
 }
 
 class OverloadsAnnotationChecker: DeclarationChecker {
@@ -247,4 +253,12 @@ class TypeParameterBoundIsNotArrayChecker : DeclarationChecker {
             }
         }
     }
+}
+
+internal fun CallableMemberDescriptor.isInsideCompanionObjectOfInterface(): Boolean {
+    val containingClass = containingDeclaration as? ClassDescriptor ?: return false
+    if (!DescriptorUtils.isCompanionObject(containingClass)) return false
+
+    val outerClassKind = (containingClass.containingDeclaration as? ClassDescriptor)?.kind
+    return outerClassKind == ClassKind.INTERFACE || outerClassKind == ClassKind.ANNOTATION_CLASS
 }
