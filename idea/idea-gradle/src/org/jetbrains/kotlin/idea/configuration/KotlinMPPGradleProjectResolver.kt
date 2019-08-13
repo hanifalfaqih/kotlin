@@ -19,6 +19,7 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.Pair
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.util.Consumer
 import com.intellij.util.PathUtilRt
 import com.intellij.util.SmartList
 import com.intellij.util.containers.MultiMap
@@ -799,6 +800,28 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtension() {
                 "true",
                 ignoreCase = true
             ) ?: false
+    }
+
+    override fun enhanceTaskProcessing(taskNames: MutableList<String>, jvmParametersSetup: String?, initScriptConsumer: Consumer<String>) {
+        super.enhanceTaskProcessing(taskNames, jvmParametersSetup, initScriptConsumer)
+        val script = """ 
+        gradle.taskGraph.beforeTask { Task task ->
+            if (task instanceof Exec) {
+                // task.executable = "/Users/kirill.shmakov/Repos/my-examples/my-mpp-basic/build/bin/m1/e1DebugExecutable/e1.kexe"
+                // task.args = ["1", "2"]
+                task.executable = "/Users/kirill.shmakov/Repos/kotlin/dist/artifacts/ideaUltimatePlugin/Kotlin/bin/macos/LLDBFrontend"
+                // task.args = ["--version"]
+                task.args = [com.intellij.openapi.externalSystem.rt.execution.ForkedDebuggerHelper.version()]
+                task.environment = ["DYLD_FRAMEWORK_PATH": "/Users/kirill.shmakov/.konan/dependencies/lldb-1-macos", "aba": "abacaba"]
+            }
+        }
+        
+        def debugProperty = com.intellij.openapi.externalSystem.rt.execution.ForkedDebuggerHelper.gradleDebugPortProperty()
+        println(System.getProperty(debugProperty))
+        println(System.getProperty('java.class.path'))""".trimIndent()
+
+        initScriptConsumer.consume(script)
+        println(">>> tasks are " + taskNames.joinToString())
     }
 }
 

@@ -132,7 +132,7 @@ open class KotlinNativeTargetConfigurator(
         val taskName = binary.runTaskName ?: return
         tasks.create(taskName, Exec::class.java).apply {
             group = RUN_GROUP
-            description = "Executes Kotlin/Native executable ${binary.name} for target ${binary.target.name}"
+            description = "Run Kotlin/Native executable ${binary.name} for target ${binary.target.name}"
 
             enabled = binary.target.konanTarget.isCurrentHost
 
