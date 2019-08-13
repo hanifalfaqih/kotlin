@@ -45,7 +45,7 @@ fun moveCaretIntoGeneratedElement(editor: Editor, element: PsiElement) {
     pointer.element?.let { moveCaretIntoGeneratedElementDocumentUnblocked(editor, it) }
 }
 
-class RestoreCaret<T: PsiElement>(beforeElement: T, val editor: Editor?) {
+class RestoreCaret<T : PsiElement>(beforeElement: T, val editor: Editor?) {
     private val relativeOffset: Int
     private val beforeElementTextLength: Int = beforeElement.textLength
 
@@ -215,10 +215,10 @@ private fun removeAfterOffset(offset: Int, whiteSpace: PsiWhiteSpace): PsiElemen
 }
 
 fun <T : KtDeclaration> insertMembersAfter(
-        editor: Editor?,
-        classOrObject: KtClassOrObject,
-        members: Collection<T>,
-        anchor: PsiElement? = null
+    editor: Editor?,
+    classOrObject: KtClassOrObject,
+    members: Collection<T>,
+    anchor: PsiElement? = null
 ): List<T> {
     members.ifEmpty { return emptyList() }
 
@@ -241,16 +241,16 @@ fun <T : KtDeclaration> insertMembersAfter(
             otherMembers.mapTo(insertedMembers) {
                 if (classOrObject is KtClass && classOrObject.isEnum()) {
                     val enumEntries = classOrObject.declarations.filterIsInstance<KtEnumEntry>()
-                    val bound = (enumEntries.lastOrNull() ?: classOrObject.allChildren.firstOrNull { it.node.elementType == KtTokens.SEMICOLON })
+                    val bound = (enumEntries.lastOrNull() ?: classOrObject.allChildren.firstOrNull { element ->
+                        element.node.elementType == KtTokens.SEMICOLON
+                    })
                     if (it !is KtEnumEntry) {
                         if (bound != null && afterAnchor.startOffset <= bound.startOffset) {
                             afterAnchor = bound
                         }
-                    }
-                    else if (bound == null && body.declarations.isNotEmpty()) {
+                    } else if (bound == null && body.declarations.isNotEmpty()) {
                         afterAnchor = body.lBrace!!
-                    }
-                    else if (bound != null && afterAnchor.startOffset > bound.startOffset) {
+                    } else if (bound != null && afterAnchor.startOffset > bound.startOffset) {
                         afterAnchor = bound.prevSibling!!
                     }
                 }
@@ -260,16 +260,16 @@ fun <T : KtDeclaration> insertMembersAfter(
             }
         }
 
-        ShortenReferences.DEFAULT.process(insertedMembers)
-
+        @Suppress("UNCHECKED_CAST") val resultMembers = ShortenReferences.DEFAULT.process(insertedMembers) as Collection<T>
+        val firstElement = resultMembers.first()
         if (editor != null) {
-            moveCaretIntoGeneratedElement(editor, insertedMembers.first())
+            moveCaretIntoGeneratedElement(editor, firstElement)
         }
 
-        val codeStyleManager = CodeStyleManager.getInstance(classOrObject.project)
-        insertedMembers.forEach { codeStyleManager.reformat(it) }
+        val codeStyleManager = CodeStyleManager.getInstance(firstElement.project)
+        resultMembers.forEach { codeStyleManager.reformat(it) }
 
-        insertedMembers
+        resultMembers.toList()
     }
 }
 
