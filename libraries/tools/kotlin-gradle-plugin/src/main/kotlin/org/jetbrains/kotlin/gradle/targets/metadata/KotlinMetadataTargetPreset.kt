@@ -37,7 +37,10 @@ class KotlinMetadataTargetPreset(
     override fun createKotlinTargetConfigurator(): KotlinOnlyTargetConfigurator<KotlinCommonCompilation, KotlinMetadataTarget> =
         KotlinMetadataTargetConfigurator(kotlinPluginVersion)
 
-    override fun instantiateTarget(): KotlinMetadataTarget = KotlinMetadataTarget(project)
+    override fun instantiateTarget(): KotlinMetadataTarget {
+        @Suppress("UnstableApiUsage")
+        return project.objects.newInstance(KotlinMetadataTarget::class.java, project)
+    }
 
     override fun createTarget(name: String): KotlinMetadataTarget =
         super.createTarget(name).apply {

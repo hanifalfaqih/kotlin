@@ -18,7 +18,10 @@ class KotlinJvmTargetPreset(
     project,
     kotlinPluginVersion
 ) {
-    override fun instantiateTarget(): KotlinJvmTarget = KotlinJvmTarget(project)
+    override fun instantiateTarget(): KotlinJvmTarget {
+        @Suppress("UnstableApiUsage")
+        return project.objects.newInstance(KotlinJvmTarget::class.java, project)
+    }
 
     override fun getName(): String = PRESET_NAME
 

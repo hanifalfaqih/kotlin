@@ -16,10 +16,10 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinNativeBinaryContainer
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinTargetWithTests
 import org.jetbrains.kotlin.gradle.targets.native.KotlinNativeBinaryTestRun
-import org.jetbrains.kotlin.gradle.utils.isGradleVersionAtLeast
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import javax.inject.Inject
 
-open class KotlinNativeTarget(
+open class KotlinNativeTarget @Inject constructor(
     project: Project,
     val konanTarget: KonanTarget
 ) : KotlinOnlyTarget<KotlinNativeCompilation>(project, KotlinPlatformType.native) {
@@ -63,7 +63,7 @@ open class KotlinNativeTarget(
     }
 }
 
-open class KotlinNativeTargetWithTests(
+open class KotlinNativeTargetWithTests @Inject constructor(
     project: Project,
     konanTarget: KonanTarget
 ) : KotlinNativeTarget(project, konanTarget), KotlinTargetWithTests<KotlinNativeBinaryTestRun> {
