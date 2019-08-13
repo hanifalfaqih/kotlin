@@ -48,7 +48,7 @@ import static org.jetbrains.kotlin.resolve.descriptorUtil.DescriptorUtilsKt.getA
 
 public abstract class AnnotationCodegen {
 
-    public static class JvmFlagAnnotation<D extends Annotated> {
+    public static final class JvmFlagAnnotation {
         private final FqName fqName;
         private final int jvmFlag;
 
@@ -57,27 +57,19 @@ public abstract class AnnotationCodegen {
             this.jvmFlag = jvmFlag;
         }
 
-        public int getJvmFlag(@NotNull D annotated) {
-            return annotated.getAnnotations().hasAnnotation(fqName) ? jvmFlag : 0;
+        public int getJvmFlag(@Nullable Annotated annotated) {
+            return annotated != null && annotated.getAnnotations().hasAnnotation(fqName) ? jvmFlag : 0;
         }
     }
 
-    public static final List<JvmFlagAnnotation<FieldDescriptor>> FIELD_FLAGS = Arrays.asList(
-            new JvmFlagAnnotation<>(JvmAnnotationUtilKt.VOLATILE_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_VOLATILE),
-            new JvmFlagAnnotation<>(JvmAnnotationUtilKt.TRANSIENT_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_TRANSIENT)
+    public static final List<JvmFlagAnnotation> FIELD_FLAGS = Arrays.asList(
+            new JvmFlagAnnotation(JvmAnnotationUtilKt.VOLATILE_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_VOLATILE),
+            new JvmFlagAnnotation(JvmAnnotationUtilKt.TRANSIENT_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_TRANSIENT)
     );
 
-    public static final List<JvmFlagAnnotation<FunctionDescriptor>> METHOD_FLAGS = Arrays.asList(
-            new JvmFlagAnnotation<>(JvmAnnotationUtilKt.STRICTFP_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_STRICT),
-            new JvmFlagAnnotation<FunctionDescriptor>(
-                    JvmAnnotationUtilKt.SYNCHRONIZED_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_SYNCHRONIZED
-            ) {
-                @Override
-                public int getJvmFlag(@NotNull FunctionDescriptor annotated) {
-                    DeclarationDescriptor container = annotated.getContainingDeclaration();
-                    return JvmCodegenUtil.isJvmInterface(container) ? 0 : super.getJvmFlag(annotated);
-                }
-            }
+    public static final List<JvmFlagAnnotation> METHOD_FLAGS = Arrays.asList(
+            new JvmFlagAnnotation(JvmAnnotationUtilKt.STRICTFP_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_STRICT),
+            new JvmFlagAnnotation(JvmAnnotationUtilKt.SYNCHRONIZED_ANNOTATION_FQ_NAME.asString(), Opcodes.ACC_SYNCHRONIZED)
     );
 
     private static final AnnotationVisitor NO_ANNOTATION_VISITOR = new AnnotationVisitor(Opcodes.API_VERSION) {
