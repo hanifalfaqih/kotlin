@@ -35,7 +35,6 @@ import org.jetbrains.kotlin.resolve.checkers.DeclarationChecker
 import org.jetbrains.kotlin.resolve.checkers.DeclarationCheckerContext
 import org.jetbrains.kotlin.resolve.descriptorUtil.isAnnotationConstructor
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
-import org.jetbrains.kotlin.resolve.isInlineClass
 import org.jetbrains.kotlin.resolve.jvm.annotations.VOLATILE_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.findJvmOverloadsAnnotation
 import org.jetbrains.kotlin.resolve.jvm.annotations.findSynchronizedAnnotation
@@ -183,9 +182,13 @@ class VolatileAnnotationChecker : DeclarationChecker {
 class SynchronizedAnnotationChecker : DeclarationChecker {
     override fun check(declaration: KtDeclaration, descriptor: DeclarationDescriptor, context: DeclarationCheckerContext) {
         val synchronizedAnnotation = descriptor.findSynchronizedAnnotation()
-        if (synchronizedAnnotation != null && descriptor is FunctionDescriptor && descriptor.modality == Modality.ABSTRACT) {
+        if (synchronizedAnnotation != null && descriptor is FunctionDescriptor) {
             val annotationEntry = DescriptorToSourceUtils.getSourceFromAnnotation(synchronizedAnnotation) ?: return
-            context.trace.report(ErrorsJvm.SYNCHRONIZED_ON_ABSTRACT.on(annotationEntry))
+            if (DescriptorUtils.isInterface(descriptor.containingDeclaration)) {
+                context.trace.report(ErrorsJvm.SYNCHRONIZED_IN_INTERFACE.on(annotationEntry))
+            } else if (descriptor.modality == Modality.ABSTRACT) {
+                context.trace.report(ErrorsJvm.SYNCHRONIZED_ON_ABSTRACT.on(annotationEntry))
+            }
         }
     }
 }
