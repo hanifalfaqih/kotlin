@@ -20,12 +20,10 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.ProjectKeys
 import com.intellij.openapi.externalSystem.model.project.*
-import com.intellij.openapi.externalSystem.rt.execution.ForkedDebuggerConfiguration
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.util.Consumer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.kotlin.gradle.CompilerArgumentsBySourceSet
@@ -323,25 +321,5 @@ class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() 
                 }
             }
         }
-    }
-
-    override fun enhanceTaskProcessing(taskNames: MutableList<String>, jvmParametersSetup: String?, initScriptConsumer: Consumer<String>) {
-        val forkedDebuggerSetup = ForkedDebuggerConfiguration.parse(jvmParametersSetup)
-        val script = """ 
-            gradle.taskGraph.beforeTask { Task task ->
-                if (task instanceof Exec) {
-                    def jvmArgs = task.jvmArgs.findAll{!it?.startsWith('-agentlib:jdwp') && !it?.startsWith('-Xrunjdwp')}
-                    task.executable = "/home/kishmakov/.konan/dependencies/lldb-1-linux/bin/LLDBFrontend"                    
-                    task.args = "55"
-                } 
-            }""".trimIndent()
-
-        "  ",
-        "  jvmArgs << com.intellij.openapi.externalSystem.rt.execution.ForkedDebuggerHelper.setupDebugger(task.path, " + debugPort.toString() + ")",
-        "  task.jvmArgs = jvmArgs",
-
-        initScriptConsumer.consume(script)
-
-        println(">>> Here we go " + taskNames.joinToString())
     }
 }
