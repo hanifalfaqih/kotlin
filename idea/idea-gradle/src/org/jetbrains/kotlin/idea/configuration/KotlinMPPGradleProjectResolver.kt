@@ -816,18 +816,18 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtension() {
         }
         gradle.taskGraph.beforeTask { Task task ->
             if (task instanceof Exec) {
-                task.executable = "/home/kishmakov/Repos/kotlin/dist/artifacts/ideaUltimatePlugin/Kotlin/bin/linux/LLDBFrontend"
+                // task.executable = "/home/kishmakov/Repos/kotlin/dist/artifacts/ideaUltimatePlugin/Kotlin/bin/linux/LLDBFrontend"
                 // task.executable = "/home/kishmakov/.konan/dependencies/lldb-1-linux/bin/LLDBFrontend"
                 // task.executable = "/Users/kirill.shmakov/Repos/my-examples/my-mpp-basic/build/bin/m1/e1DebugExecutable/e1.kexe"
-                // task.executable = "/Users/kirill.shmakov/Repos/kotlin/dist/artifacts/ideaUltimatePlugin/Kotlin/bin/macos/LLDBFrontend"
+                task.executable = "/Users/kirill.shmakov/Repos/kotlin/dist/artifacts/ideaUltimatePlugin/Kotlin/bin/macos/LLDBFrontend"
                 
                 // task.args = ["55111"] 
                 // task.args = ["1", "2"]
                 task.args = ["--version"]
                 // task.args = [com.intellij.openapi.externalSystem.rt.execution.ForkedDebuggerHelper.version()]                
                 
-                // task.environment = ["DYLD_FRAMEWORK_PATH": "/Users/kirill.shmakov/.konan/dependencies/lldb-1-macos", "aba": "abacaba"]
-                task.environment = ["LD_PRELOAD": "/home/kishmakov/.konan/dependencies/lldb-1-linux/lib/liblldb.so"]
+                task.environment = ["DYLD_FRAMEWORK_PATH": "/Users/kirill.shmakov/.konan/dependencies/lldb-1-macos", "aba": "abacaba"]
+                // task.environment = ["LD_PRELOAD": "/home/kishmakov/.konan/dependencies/lldb-1-linux/lib/liblldb.so"]
             }
         }
         
