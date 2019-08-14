@@ -41,7 +41,7 @@ open class PublishedKotlinModule : Plugin<Project> {
                     sign(configurations["archives"])
                 }
 
-                (tasks.getByName("signArchives") as Sign).apply {
+                tasks.named<Sign>("signArchives").configure {
                     enabled = signingRequired
                 }
             }
@@ -98,9 +98,9 @@ open class PublishedKotlinModule : Plugin<Project> {
                 }
             }
 
-            val preparePublication = project.rootProject.tasks.getByName("preparePublication")
+            tasks.named<Upload>("uploadArchives").configure {
 
-            val uploadArchives = (tasks.getByName("uploadArchives") as Upload).apply {
+                val preparePublication = project.rootProject.tasks.named("preparePublication").get()
 
                 dependsOn(preparePublication)
 
@@ -152,8 +152,8 @@ open class PublishedKotlinModule : Plugin<Project> {
                 }
             }
 
-            tasks.create("publish") {
-                dependsOn(uploadArchives)
+            tasks.register("publish") {
+                dependsOn(tasks.named("uploadArchives"))
             }
         }
     }
