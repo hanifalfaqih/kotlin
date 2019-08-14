@@ -1,3 +1,4 @@
+// PREVIEW_ENABLED: TRUE
 run {
     println("Hello world 1")
 

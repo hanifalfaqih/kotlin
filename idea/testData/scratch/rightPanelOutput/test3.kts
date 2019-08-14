@@ -1,3 +1,4 @@
+// PREVIEW_ENABLED: TRUE
 """
 AAA
 BBB

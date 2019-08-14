@@ -1,3 +1,4 @@
+// PREVIEW_ENABLED: TRUE
 println("Hello world")
 
 for (x in 1..1) {

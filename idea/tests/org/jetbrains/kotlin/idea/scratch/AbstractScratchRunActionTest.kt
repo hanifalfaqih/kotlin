@@ -118,7 +118,7 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
         val actualOutput = getFileTextWithInlays()
 
-        val expectedFile = getExpectedFile(fileName, isRepl)
+        val expectedFile = getExpectedFile(fileName, isRepl = isRepl, suffix = "after")
         KotlinTestUtils.assertEqualsToFile(expectedFile, actualOutput)
     }
 
@@ -127,7 +127,7 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
 
         val previewTextWithFoldings = getPreviewTextWithFoldings()
 
-        val expectedFile = getExpectedFile(fileName, isRepl)
+        val expectedFile = getExpectedFile(fileName, isRepl = isRepl, suffix = "preview")
         KotlinTestUtils.assertEqualsToFile(expectedFile, previewTextWithFoldings)
     }
 
@@ -147,11 +147,11 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
         waitUntilScratchFinishes()
     }
 
-    private fun getExpectedFile(fileName: String, isRepl: Boolean): File {
+    private fun getExpectedFile(fileName: String, isRepl: Boolean, suffix: String): File {
         val expectedFileName = if (isRepl) {
-            fileName.replace(".kts", ".repl.after")
+            fileName.replace(".kts", ".repl.$suffix")
         } else {
-            fileName.replace(".kts", ".comp.after")
+            fileName.replace(".kts", ".comp.$suffix")
         }
 
         return File(testDataPath, expectedFileName)
