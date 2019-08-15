@@ -25,10 +25,13 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.StandardFileSystems
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.util.io.URLUtil
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.caches.project.getAllProjectSdks
 import org.jetbrains.kotlin.idea.core.script.dependencies.SyncScriptDependenciesLoader
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
 import org.jetbrains.kotlin.scripting.definitions.findScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
@@ -40,23 +43,34 @@ import kotlin.script.experimental.api.valueOrNull
 // NOTE: this service exists exclusively because ScriptDependencyManager
 // cannot be registered as implementing two services (state would be duplicated)
 class IdeScriptDependenciesProvider(
-    private val scriptDependenciesManager: ScriptDependenciesManager
-) : ScriptDependenciesProvider {
-    override fun getScriptConfigurationResult(file: VirtualFile): ScriptCompilationConfigurationResult? = scriptDependenciesManager.getRefinedCompilationConfiguration(file)
+    private val scriptDependenciesManager: ScriptDependenciesManager,
+    project: Project
+) : ScriptDependenciesProvider(project) {
+    override fun getScriptConfigurationResult(file: KtFile): ScriptCompilationConfigurationResult? {
+        return scriptDependenciesManager.getRefinedCompilationConfiguration(file)
+    }
 }
 
 // TODO: rename and provide alias for compatibility - this is not only about dependencies anymore
 class ScriptDependenciesManager internal constructor(
     private val cacheUpdater: ScriptsCompilationConfigurationUpdater,
-    private val cache: ScriptsCompilationConfigurationCache
+    private val cache: ScriptsCompilationConfigurationCache,
+    private val project: Project
 ) {
-    fun getScriptClasspath(file: VirtualFile): List<VirtualFile> =
+
+    @Deprecated("Use getScriptClasspath(KtFile) instead")
+    fun getScriptClasspath(file: VirtualFile): List<VirtualFile>  {
+        val ktFile = PsiManager.getInstance(project).findFile(file) as? KtFile ?: return emptyList()
+        return getScriptClasspath(ktFile)
+    }
+
+    fun getScriptClasspath(file: KtFile): List<VirtualFile> =
         toVfsRoots(cacheUpdater.getCurrentCompilationConfiguration(file)?.valueOrNull()?.dependenciesClassPath.orEmpty())
 
-    fun getRefinedCompilationConfiguration(file: VirtualFile): ScriptCompilationConfigurationResult? =
+    fun getRefinedCompilationConfiguration(file: KtFile): ScriptCompilationConfigurationResult? =
         cacheUpdater.getCurrentCompilationConfiguration(file)
 
-    fun getScriptSdk(file: VirtualFile, project: Project): Sdk? {
+    fun getScriptSdk(file: KtFile, project: Project): Sdk? {
         return getScriptSdk(getRefinedCompilationConfiguration(file)?.valueOrNull())
             ?: getScriptDefaultSdk(project)
     }
@@ -124,10 +138,13 @@ class ScriptDependenciesManager internal constructor(
         internal val log = Logger.getInstance(ScriptDependenciesManager::class.java)
 
         @TestOnly
-        fun updateScriptDependenciesSynchronously(virtualFile: VirtualFile, project: Project) {
+        fun updateScriptDependenciesSynchronously(file: PsiFile, project: Project) {
             val loader = SyncScriptDependenciesLoader(project)
-            val scriptDefinition = virtualFile.findScriptDefinition(project) ?: return
-            loader.loadDependencies(virtualFile, scriptDefinition)
+            val scriptDefinition = file.findScriptDefinition() ?: return
+            assert(file is KtFile) {
+                "PsiFile should be a KtFile, otherwise script dependencies cannot be loaded"
+            }
+            loader.loadDependencies(file as KtFile, scriptDefinition)
             loader.notifyRootsChanged()
         }
     }
