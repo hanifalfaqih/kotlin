@@ -16,19 +16,18 @@ import org.jetbrains.kotlin.ir.util.SymbolTable
 
 class JsIrLinker(
     currentModule: ModuleDescriptor,
+    mangler: KotlinMangler,
     logger: LoggingContext,
     builtIns: IrBuiltIns,
     symbolTable: SymbolTable
 ) : KotlinIrLinker(logger, builtIns, symbolTable, emptyList(), null, PUBLIC_LOCAL_UNIQ_ID_EDGE),
     DescriptorUniqIdAware by JsDescriptorUniqIdAware {
 
-    private val FUNCTION_INDEX_START: Long = indexAfterKnownBuiltins
-
     override fun getPrimitiveTypeOrNull(symbol: IrClassifierSymbol, hasQuestionMark: Boolean) =
         builtIns.getPrimitiveTypeOrNullByDescriptor(symbol.descriptor, hasQuestionMark)
 
     override val descriptorReferenceDeserializer =
-        JsDescriptorReferenceDeserializer(currentModule, builtIns, FUNCTION_INDEX_START)
+        JsDescriptorReferenceDeserializer(currentModule, mangler, builtIns)
 
     override fun reader(moduleDescriptor: ModuleDescriptor, uniqId: UniqId): ByteArray {
         return moduleDescriptor.kotlinLibrary.irDeclaration(uniqId.index, uniqId.isLocal)
@@ -55,17 +54,4 @@ class JsIrLinker(
     }
 
     private val ModuleDescriptor.userName get() = kotlinLibrary.libraryFile.absolutePath
-
-    override fun declareForwardDeclarations() {
-        // since for `knownBuiltIns` such as FunctionN it is possible to have unbound symbols after deserialization
-        // reference them through out lazy symbol table
-        with(symbolTable) {
-            ArrayList(unboundClasses).forEach { lazyWrapper.referenceClass(it.descriptor) }
-            ArrayList(unboundConstructors).forEach { lazyWrapper.referenceConstructor(it.descriptor) }
-            ArrayList(unboundEnumEntries).forEach { lazyWrapper.referenceEnumEntry(it.descriptor) }
-            ArrayList(unboundFields).forEach { lazyWrapper.referenceField(it.descriptor) }
-            ArrayList(unboundSimpleFunctions).forEach { lazyWrapper.referenceSimpleFunction(it.descriptor) }
-            ArrayList(unboundTypeParameters).forEach { lazyWrapper.referenceTypeParameter(it.descriptor) }
-        }
-    }
 }

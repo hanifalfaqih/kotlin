@@ -181,7 +181,7 @@ class ScriptsCompilationConfigurationCache(private val project: Project) {
 
     fun save(virtualFile: VirtualFile, new: ScriptCompilationConfigurationResult): Boolean {
         val old = scriptDependenciesCache.replace(virtualFile, new)
-        val changed = new != old
+        val changed = new.valueOrNull() != old?.valueOrNull()
         if (changed) {
             onChange(listOf(virtualFile))
         }

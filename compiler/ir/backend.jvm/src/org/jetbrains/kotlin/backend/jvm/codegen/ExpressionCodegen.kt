@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner.OperationKind.SAFE
 import org.jetbrains.kotlin.codegen.pseudoInsns.fakeAlwaysFalseIfeq
 import org.jetbrains.kotlin.codegen.pseudoInsns.fixStackAndJump
 import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
+import org.jetbrains.kotlin.config.ApiVersion
 import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
@@ -206,7 +207,10 @@ class ExpressionCodegen(
         if (!param.type.unboxInlineClass().isNullable() && !isPrimitive(asmType)) {
             mv.load(findLocalIndex(param.symbol), asmType)
             mv.aconst(param.name.asString())
-            mv.invokestatic("kotlin/jvm/internal/Intrinsics", "checkParameterIsNotNull", "(Ljava/lang/Object;Ljava/lang/String;)V", false)
+            val methodName =
+                if (state.languageVersionSettings.apiVersion >= ApiVersion.KOTLIN_1_4) "checkNotNullParameter"
+                else "checkParameterIsNotNull"
+            mv.invokestatic(IrIntrinsicMethods.INTRINSICS_CLASS_NAME, methodName, "(Ljava/lang/Object;Ljava/lang/String;)V", false)
         }
     }
 
@@ -778,8 +782,7 @@ class ExpressionCodegen(
                     v.checkcast(boxedRightType)
                 } else {
                     generateAsCast(
-                        mv, kotlinType, boxedRightType, expression.operator == IrTypeOperator.SAFE_CAST,
-                        state.languageVersionSettings.isReleaseCoroutines()
+                        mv, kotlinType, boxedRightType, expression.operator == IrTypeOperator.SAFE_CAST, state.languageVersionSettings
                     )
                 }
                 MaterialValue(this, boxedRightType, expression.type).coerce(expression.type)
@@ -805,10 +808,10 @@ class ExpressionCodegen(
                 val value = expression.argument.accept(this, data).materialized
                 mv.dup()
                 mv.visitLdcInsn("TODO provide message for IMPLICIT_NOTNULL") /*TODO*/
-                mv.invokestatic(
-                    "kotlin/jvm/internal/Intrinsics", "checkExpressionValueIsNotNull",
-                    "(Ljava/lang/Object;Ljava/lang/String;)V", false
-                )
+                val methodName =
+                    if (state.languageVersionSettings.apiVersion >= ApiVersion.KOTLIN_1_4) "checkNotNullExpressionValue"
+                    else "checkExpressionValueIsNotNull"
+                mv.invokestatic(IrIntrinsicMethods.INTRINSICS_CLASS_NAME, methodName, "(Ljava/lang/Object;Ljava/lang/String;)V", false)
                 // Unbox primitives.
                 value.coerce(expression.type)
             }

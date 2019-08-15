@@ -3133,6 +3133,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/notNullAssertions/assertionForNotNullTypeParam.kt");
         }
 
+        @TestMetadata("assertionForNotNullTypeParam_1_4.kt")
+        public void testAssertionForNotNullTypeParam_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/notNullAssertions/assertionForNotNullTypeParam_1_4.kt");
+        }
+
         @TestMetadata("doNotGenerateParamAssertions.kt")
         public void testDoNotGenerateParamAssertions() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/notNullAssertions/doNotGenerateParamAssertions.kt");
@@ -3236,9 +3241,24 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
             runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/kt12839.kt");
         }
 
+        @TestMetadata("multipleExclExcl_1_4.kt")
+        public void testMultipleExclExcl_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/multipleExclExcl_1_4.kt");
+        }
+
         @TestMetadata("notNullAsNotNullable.kt")
         public void testNotNullAsNotNullable() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/notNullAsNotNullable.kt");
+        }
+
+        @TestMetadata("notNullExpressionValueTwice_1_4.kt")
+        public void testNotNullExpressionValueTwice_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/notNullExpressionValueTwice_1_4.kt");
+        }
+
+        @TestMetadata("nullCheckAfterExclExcl_1_4.kt")
+        public void testNullCheckAfterExclExcl_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/nullCheckAfterExclExcl_1_4.kt");
         }
 
         @TestMetadata("primitiveCheck.kt")
@@ -3249,6 +3269,11 @@ public class IrBytecodeTextTestGenerated extends AbstractIrBytecodeTextTest {
         @TestMetadata("redundantSafeCall.kt")
         public void testRedundantSafeCall() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/redundantSafeCall.kt");
+        }
+
+        @TestMetadata("redundantSafeCall_1_4.kt")
+        public void testRedundantSafeCall_1_4() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/nullCheckOptimization/redundantSafeCall_1_4.kt");
         }
 
         @TestMetadata("reifiedIs.kt")
