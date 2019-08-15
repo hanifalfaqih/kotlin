@@ -13,6 +13,9 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.editor.FoldingModel
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.MarkupModel
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
@@ -23,7 +26,6 @@ import kotlin.math.max
 
 object PreviewEditorScratchOutputHandler : ScratchOutputHandler {
     override fun onStart(file: ScratchFile) {
-//        getToolwindowHandler().onStart(file)
     }
 
     override fun handle(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
@@ -31,12 +33,10 @@ object PreviewEditorScratchOutputHandler : ScratchOutputHandler {
     }
 
     override fun error(file: ScratchFile, message: String) {
-//        getToolwindowHandler().error(file, message)
+        // TODO-roman.golyshev decide what to do here
     }
 
-    override fun onFinish(file: ScratchFile) {
-//        getToolwindowHandler().onFinish(file)
-    }
+    override fun onFinish(file: ScratchFile) {}
 
     override fun clear(file: ScratchFile) {
         file.previewEditor.previewOutputBlocksManager?.clear()
@@ -54,7 +54,7 @@ object PreviewEditorScratchOutputHandler : ScratchOutputHandler {
     private fun printToPreviewEditor(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
         TransactionGuard.submitTransaction(file.project, Runnable {
             val outputManager = file.previewEditor.previewOutputBlocksManager ?: run {
-                val previewOutputManager = PreviewOutputBlocksManager(file.previewEditor.document, file.previewEditor.foldingModel)
+                val previewOutputManager = PreviewOutputBlocksManager(file.previewEditor)
                 file.previewEditor.previewOutputBlocksManager = previewOutputManager
                 previewOutputManager
             }
@@ -69,9 +69,12 @@ var Editor.previewOutputBlocksManager: PreviewOutputBlocksManager? by UserDataPr
 
 private val ScratchExpression.height: Int get() = lineEnd - lineStart + 1
 
-class PreviewOutputBlocksManager(private val targetDocument: Document, private val foldingModel: FoldingModel) {
+class PreviewOutputBlocksManager(editor: Editor) {
+    val targetDocument: Document = editor.document
+    val foldingModel: FoldingModel = editor.foldingModel
+    val markupModel: MarkupModel = editor.markupModel
 
-    private val blocks: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
+    val blocks: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
 
     val alignments: List<Pair<Int, Int>> get() = blocks.values.map { it.sourceExpression.lineStart to it.lineStart }
 
@@ -99,20 +102,41 @@ class PreviewOutputBlocksManager(private val targetDocument: Document, private v
         private var foldRegion: FoldRegion? = null
 
         fun addOutput(output: ScratchOutput) {
+            printAndSaveOutput(output)
+
+            blocks.tailMap(sourceExpression).values.forEach {
+                it.recalculatePosition()
+                it.updateFolding()
+            }
+        }
+
+        private fun printAndSaveOutput(output: ScratchOutput) {
             val beforeAdding = lineEnd
+            val currentOutputStartLine = if (outputs.isEmpty()) lineStart else beforeAdding + 1
+
             outputs.add(output)
 
-            val currentOutputStartLine = if (outputs.size == 1) lineStart else beforeAdding + 1
             runWriteAction {
                 executeCommand {
                     targetDocument.insertStringAtLine(currentOutputStartLine, output.text)
                 }
             }
 
-            blocks.tailMap(sourceExpression).values.forEach {
-                it.recalculatePosition()
-                it.updateFolding()
-            }
+            val insertedTextStart = targetDocument.getLineStartOffset(currentOutputStartLine)
+            val insertedTextEnd = targetDocument.getLineEndOffset(lineEnd)
+            colorRange(insertedTextStart, insertedTextEnd, output.type)
+        }
+
+        private fun colorRange(startOffset: Int, endOffset: Int, outputType: ScratchOutputType) {
+            val textAttributes = getAttributesForOutputType(outputType)
+
+            markupModel.addRangeHighlighter(
+                startOffset,
+                endOffset,
+                HighlighterLayer.SYNTAX,
+                textAttributes,
+                HighlighterTargetArea.EXACT_RANGE
+            )
         }
 
         private fun recalculatePosition() {
