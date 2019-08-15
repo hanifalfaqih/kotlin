@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.ir.util
 
+import org.jetbrains.kotlin.builtins.KOTLIN_REFLECT_FQ_NAME
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
@@ -607,3 +608,8 @@ val IrFunctionReference.typeSubstitutionMap: Map<IrTypeParameterSymbol, IrType>
 
 val IrFunctionAccessExpression.typeSubstitutionMap: Map<IrTypeParameterSymbol, IrType>
     get() = getTypeSubstitutionMap(symbol.owner)
+
+fun IrFunction.isTypeOfIntrinsic(): Boolean =
+    this.name.asString() == "typeOf" &&
+            this.valueParameters.isEmpty() &&
+            (this.parent as? IrPackageFragment)?.fqName == KOTLIN_REFLECT_FQ_NAME
