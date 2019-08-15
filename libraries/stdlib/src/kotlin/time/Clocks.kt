@@ -71,7 +71,7 @@ public abstract class AbstractDoubleClock(protected val unit: DurationUnit) : Cl
  *
  * Implementation note: the current clock reading value is stored as a [Long] number of nanoseconds,
  * thus it's capable to represent a time range of approximately ±292 years.
- * Should the reading value overflow in the result of [plusAssign] operation, an [IllegalStateException] is thrown.
+ * Should the reading value overflow as the result of [plusAssign] operation, an [IllegalStateException] is thrown.
  */
 @SinceKotlin("1.3")
 @ExperimentalTime
@@ -87,7 +87,7 @@ public class TestClock : AbstractLongClock(unit = DurationUnit.NANOSECONDS) {
      * For example, if the duration being added is `0.6.nanoseconds`, the clock reading won't advance because
      * the duration value will be rounded to zero nanoseconds.
      *
-     * @throws IllegalStateException when the reading value overflows in the result of this operation.
+     * @throws IllegalStateException when the reading value overflows as the result of this operation.
      */
     public operator fun plusAssign(duration: Duration) {
         val delta = duration.toDouble(unit)
