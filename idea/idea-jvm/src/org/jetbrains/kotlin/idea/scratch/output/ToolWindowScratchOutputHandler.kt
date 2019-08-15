@@ -134,7 +134,7 @@ private object ToolWindowScratchOutputHandler : ScratchOutputHandlerAdapter() {
         val window = toolWindowManager.getToolWindow(ScratchToolWindowFactory.ID)
         ScratchToolWindowFactory().createToolWindowContent(project, window)
 
-        Disposer.register(file.editor, Disposable {
+        Disposer.register(file.presentation, Disposable {
             window.setAvailable(false, null)
         })
 

@@ -41,7 +41,7 @@ fun getScratchPanelFromSelectedEditor(project: Project): ScratchTopPanel? {
 }
 
 fun TextEditor.getScratchPanel(): ScratchTopPanel? {
-    return if (this is KtsScratchTextEditorWithPreview) topPanel else parentEditorWithPreview?.topPanel
+    return if (this is KtsScratchTextEditorWithPreview) this else parentEditorWithPreview
 }
 
 fun clearScratchFileOutputHandler(scratchFile: ScratchFile) {

@@ -22,11 +22,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchPresentation
 import org.jetbrains.kotlin.idea.scratch.ui.scratchFileOptions
 
-abstract class ScratchFile(val project: Project, val editor: KtsScratchTextEditorWithPreview) {
-    val previewEditor = editor.preview
+abstract class ScratchFile(val project: Project, val presentation: ScratchPresentation) {
+    val sourceEditor = presentation.sourceTextEditor.editor
+    val previewEditor = presentation.previewTextEditor.editor
+
     var replScratchExecutor: SequentialScratchExecutor? = null
     var compilingScratchExecutor: ScratchExecutor? = null
 
@@ -35,11 +37,11 @@ abstract class ScratchFile(val project: Project, val editor: KtsScratchTextEdito
     }
 
     fun getPsiFile(): PsiFile? = runReadAction {
-        PsiDocumentManager.getInstance(project).getPsiFile(editor.editor.document)
+        PsiDocumentManager.getInstance(project).getPsiFile(sourceEditor.document)
     }
 
     fun getModule(): Module? {
-        return editor.getScratchPanel()?.getModule()
+        return presentation.selectedModule
     }
 
     val options: ScratchFileOptions

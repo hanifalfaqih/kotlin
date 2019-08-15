@@ -24,10 +24,10 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.idea.scratch.actions.ScratchCompilationSupport
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandlerAdapter
-import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchPresentation
 
 abstract class ScratchFileLanguageProvider {
-    fun newScratchFile(project: Project, editor: KtsScratchTextEditorWithPreview): ScratchFile? {
+    fun newScratchFile(project: Project, editor: ScratchPresentation): ScratchFile? {
         val scratchFile = createFile(project, editor) ?: return null
 
         scratchFile.replScratchExecutor = createReplExecutor(scratchFile)
@@ -52,7 +52,7 @@ abstract class ScratchFileLanguageProvider {
         })
     }
 
-    protected abstract fun createFile(project: Project, editor: KtsScratchTextEditorWithPreview): ScratchFile?
+    protected abstract fun createFile(project: Project, editor: ScratchPresentation): ScratchFile?
     protected abstract fun createReplExecutor(file: ScratchFile): SequentialScratchExecutor?
     protected abstract fun createCompilingExecutor(file: ScratchFile): ScratchExecutor?
 

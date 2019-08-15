@@ -69,7 +69,7 @@ class ScratchOptionsTest : AbstractScratchRunActionTest() {
         Assert.assertEquals(
             "Selected module should be equal to current project module for worksheets",
             myFixture.module,
-            scratchTopPanel.getModule()
+            scratchTopPanel.scratchFile.getModule()
         )
     }
 

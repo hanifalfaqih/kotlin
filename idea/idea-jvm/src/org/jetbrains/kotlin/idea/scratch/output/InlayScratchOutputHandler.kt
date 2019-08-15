@@ -17,7 +17,6 @@
 package org.jetbrains.kotlin.idea.scratch.output
 
 import com.intellij.openapi.application.TransactionGuard
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
@@ -51,13 +50,13 @@ object InlayScratchOutputHandler : ScratchOutputHandler {
     }
 
     override fun clear(file: ScratchFile) {
-        clearInlays(file.editor)
+        clearInlays(file)
         getToolwindowHandler().clear(file)
     }
 
     private fun createInlay(file: ScratchFile, expression: ScratchExpression, output: ScratchOutput) {
         TransactionGuard.submitTransaction(file.project, Runnable {
-            val editor = file.editor.editor
+            val editor = file.sourceEditor
             val line = expression.lineStart
 
             val lineStartOffset = editor.document.getLineStartOffset(line)
@@ -99,17 +98,17 @@ object InlayScratchOutputHandler : ScratchOutputHandler {
     }
 
     private fun maxLineLength(file: ScratchFile): Int {
-        val doc = file.editor.editor.document
+        val doc = file.sourceEditor.document
         return file.getExpressions()
             .flatMap { it.lineStart..it.lineEnd }
             .map { doc.getLineEndOffset(it) - doc.getLineStartOffset(it) }
             .max() ?: 0
     }
 
-    private fun clearInlays(editor: TextEditor) {
-        TransactionGuard.submitTransaction(editor, Runnable {
-            editor
-                .editor.inlayModel.getInlays(0, editor.editor.document.textLength)
+    private fun clearInlays(scratchFile: ScratchFile) {
+        TransactionGuard.submitTransaction(scratchFile.presentation, Runnable {
+            scratchFile
+                .sourceEditor.inlayModel.getInlays(0, scratchFile.sourceEditor.document.textLength)
                 .forEach { Disposer.dispose(it) }
         })
     }

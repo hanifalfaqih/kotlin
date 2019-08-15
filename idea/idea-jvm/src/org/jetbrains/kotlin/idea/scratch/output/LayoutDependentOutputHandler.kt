@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.idea.scratch.ui.TextEditorWithPreview
 
 /**
  * This output handler switches between [noPreviewHandler] and [withPreviewHandler] depending on the state of
- * [ScratchFile.editor] selected layout.
+ * [ScratchFile.sourceEditor] selected layout.
  */
 class LayoutDependentOutputHandler(
     private val noPreviewHandler: ScratchOutputHandler,
@@ -41,6 +41,6 @@ class LayoutDependentOutputHandler(
     }
 
     private fun selectTargetHandler(file: ScratchFile): ScratchOutputHandler {
-        return if (file.editor.layout == TextEditorWithPreview.Layout.SHOW_EDITOR) noPreviewHandler else withPreviewHandler
+        return if (file.presentation.selectedLayout == TextEditorWithPreview.Layout.SHOW_EDITOR) noPreviewHandler else withPreviewHandler
     }
 }

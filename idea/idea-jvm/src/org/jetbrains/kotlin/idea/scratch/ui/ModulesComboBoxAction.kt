@@ -2,19 +2,16 @@ package org.jetbrains.kotlin.idea.scratch.ui
 
 import com.intellij.execution.ui.ConfigurationModuleSelector
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.module.Module
-import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.module.ModuleType
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vcs.changes.committed.LabeledComboBoxAction
-import org.jetbrains.kotlin.idea.caches.project.productionSourceInfo
-import org.jetbrains.kotlin.idea.caches.project.testSourceInfo
 import javax.swing.JComponent
 
-class ModulesComboBoxAction(label: String, private val modules: List<Module>) : LabeledComboBoxAction(label) {
+class ModulesComboBoxAction(label: String) : LabeledComboBoxAction(label) {
+    private var modules: List<Module> = emptyList()
     private val listeners: MutableList<() -> Unit> = mutableListOf()
 
     var selectedModule: Module? = null
@@ -24,6 +21,10 @@ class ModulesComboBoxAction(label: String, private val modules: List<Module>) : 
         }
 
     var isVisible: Boolean = true
+
+    fun setModules(newModules: Collection<Module>) {
+        modules = newModules.toList()
+    }
 
     override fun createPopupActionGroup(button: JComponent?): DefaultActionGroup =
         throw UnsupportedOperationException("Should not be called!")

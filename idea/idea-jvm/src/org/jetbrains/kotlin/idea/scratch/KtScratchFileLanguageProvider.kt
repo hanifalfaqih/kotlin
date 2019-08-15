@@ -23,11 +23,11 @@ import org.jetbrains.kotlin.idea.scratch.output.LayoutDependentOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.PreviewEditorScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.output.ScratchOutputHandler
 import org.jetbrains.kotlin.idea.scratch.repl.KtScratchReplExecutor
-import org.jetbrains.kotlin.idea.scratch.ui.KtsScratchTextEditorWithPreview
+import org.jetbrains.kotlin.idea.scratch.ui.ScratchPresentation
 
 class KtScratchFileLanguageProvider : ScratchFileLanguageProvider() {
-    override fun createFile(project: Project, editor: KtsScratchTextEditorWithPreview): ScratchFile? {
-        return KtScratchFile(project, editor)
+    override fun createFile(project: Project, presentation: ScratchPresentation): ScratchFile? {
+        return KtScratchFile(project, presentation)
     }
 
     override fun createReplExecutor(file: ScratchFile) = KtScratchReplExecutor(file)

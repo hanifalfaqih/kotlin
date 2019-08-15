@@ -349,7 +349,10 @@ abstract class AbstractScratchRunActionTest : FileEditorManagerTestCase() {
             if (module != null && !InTextDirectivesUtils.isDirectiveDefined(fileText, "// NO_MODULE")) {
                 scratchPanel.setModule(module)
             }
-        }
 
+            if (InTextDirectivesUtils.getPrefixedBoolean(fileText, "// PREVIEW_ENABLED: ") != true) {
+                scratchPanel.setPreviewEditorEnabled(false)
+            }
+        }
     }
 }
