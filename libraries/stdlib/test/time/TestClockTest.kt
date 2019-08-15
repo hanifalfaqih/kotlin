@@ -19,11 +19,17 @@ class TestClockTest {
         }
 
         val moderatePositiveDuration = Long.MAX_VALUE.takeHighestOneBit().nanoseconds
+        val borderlinePositiveDuration = Long.MAX_VALUE.nanoseconds // rounded to 2.0^63, which is slightly more than Long.MAX_VALUE
         val borderlineNegativeDuration = Long.MIN_VALUE.nanoseconds
         run {
             val clock = TestClock()
             clock += moderatePositiveDuration
             assertFailsWith<IllegalStateException>("Should overflow positive") { clock += moderatePositiveDuration }
+        }
+        run {
+            val clock = TestClock()
+            clock += borderlinePositiveDuration
+            assertFailsWith<IllegalStateException>("Should overflow positive") { clock += 1.nanoseconds }
         }
         run {
             val clock = TestClock()

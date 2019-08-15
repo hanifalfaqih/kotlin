@@ -98,10 +98,9 @@ public class TestClock : AbstractLongClock(unit = DurationUnit.NANOSECONDS) {
             if (reading xor longDelta >= 0 && reading xor newReading < 0) overflow(duration)
             newReading
         } else {
-            if (reading xor longDelta >= 0) overflow(duration)
-            // when delta is greater than long and has different sign with reading, add it as double
+            // when delta is greater than long, add it as double
             val newReading = reading + delta
-            if (newReading >= Long.MAX_VALUE || newReading < Long.MIN_VALUE) overflow(duration)
+            if (newReading > Long.MAX_VALUE || newReading < Long.MIN_VALUE) overflow(duration)
             newReading.toLong()
         }
     }
