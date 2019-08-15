@@ -69,7 +69,6 @@ var DataNode<out ModuleData>.dependenciesCache
 var DataNode<out ModuleData>.pureKotlinSourceFolders
         by NotNullableCopyableDataNodeUserDataProperty(Key.create<List<String>>("PURE_KOTLIN_SOURCE_FOLDER"), emptyList())
 
-
 class KotlinGradleProjectResolverExtension : AbstractProjectResolverExtension() {
     val isAndroidProjectKey = Key.findKeyByName("IS_ANDROID_PROJECT_KEY")
     private val LOG = Logger.getInstance(PsiPrecedences::class.java)
